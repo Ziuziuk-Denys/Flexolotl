@@ -19,6 +19,7 @@ mod shell;
 mod statuses;
 mod theme;
 mod tray;
+mod update;
 mod widgets;
 mod window;
 
@@ -28,13 +29,18 @@ use reqwest_client::ReqwestClient;
 use std::{env, sync::Arc};
 
 pub const BACKGROUND_FLAG: &str = "--background";
+pub const AFTER_UPDATE_FLAG: &str = "--after-update";
+pub const LIVE_FLAG: &str = "--live";
 
 fn main() {
+    if has_flag(AFTER_UPDATE_FLAG) {
+        instance::wait_for_previous();
+    }
     let (sender, requests) = async_channel::unbounded();
     let Instance::First = instance::claim(sender.clone()) else {
         return;
     };
-    let starts_hidden = env::args().any(|argument| argument == BACKGROUND_FLAG);
+    let starts_hidden = has_flag(BACKGROUND_FLAG);
     let http_client = ReqwestClient::user_agent("Flexolotl").expect("valid user agent");
     let application = gpui_kit::application()
         .with_quit_mode(QuitMode::Explicit)
@@ -48,4 +54,8 @@ fn main() {
         platform::menu::install(cx);
         background::start(sender, requests, starts_hidden, cx);
     });
+}
+
+pub fn has_flag(flag: &str) -> bool {
+    env::args().skip(1).any(|argument| argument == flag)
 }

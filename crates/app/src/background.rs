@@ -102,6 +102,10 @@ pub fn close(cx: &mut App) {
     }
 }
 
+pub fn quit_later(cx: &mut App) {
+    cx.defer(quit);
+}
+
 pub fn quit(cx: &mut App) {
     let shell = cx.global::<Background>().shell.clone();
     shell.update(cx, |shell, _| shell.finish());

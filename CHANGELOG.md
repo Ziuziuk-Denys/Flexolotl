@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Updates itself: looks for a new version at every start, downloads it quietly and shows "Update" in the header. The status stays on through the restart. Every download is checked against a signature.
+
 ## 0.1.1
 
 - A song appears on your profile in under half a second, at once with its cover and the line. It took four seconds.

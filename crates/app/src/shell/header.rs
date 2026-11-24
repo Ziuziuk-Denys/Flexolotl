@@ -1,5 +1,5 @@
 use super::{Screen, Shell};
-use crate::{assets::icon, platform::chrome, theme::Theme, widgets::icon};
+use crate::{assets::icon, platform::chrome, theme::Theme, update::UpdateState, widgets::icon};
 use gpui_kit::{
     AnyElement, Context, Div, InteractiveElement, IntoElement, MouseButton, ParentElement,
     SharedString, Stateful, StatefulInteractiveElement, Styled, WindowControlArea, div,
@@ -40,6 +40,15 @@ impl Shell {
                 })),
             )
             .child(div().flex_1())
+            .when(
+                is_home && self.update.state != UpdateState::Idle,
+                |header| {
+                    header.child(
+                        link("header-update", copy.restart_updated)
+                            .on_click(cx.listener(|shell, _, _, cx| shell.use_update(cx))),
+                    )
+                },
+            )
             .children(is_home.then(|| {
                 link("header-settings", copy.settings)
                     .on_click(cx.listener(|shell, _, _, cx| shell.go_to(Screen::Settings, cx)))

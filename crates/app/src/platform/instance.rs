@@ -11,6 +11,8 @@ use std::{
 };
 
 const ANSWER_TIMEOUT: Duration = Duration::from_secs(1);
+const WAIT_TICK: Duration = Duration::from_millis(100);
+const LONGEST_WAIT_TICKS: u32 = 100;
 const TOKEN_LENGTH: usize = 32;
 const ACCEPTED: &[u8; 2] = b"ok";
 
@@ -30,11 +32,25 @@ pub fn claim(requests: async_channel::Sender<Request>) -> Instance {
     Instance::First
 }
 
+pub fn wait_for_previous() {
+    for _ in 0..LONGEST_WAIT_TICKS {
+        if address().is_none_or(|address| TcpStream::connect(address).is_err()) {
+            return;
+        }
+        thread::sleep(WAIT_TICK);
+    }
+}
+
+fn address() -> Option<SocketAddr> {
+    let note = fs::read_to_string(paths::instance_file()).ok()?;
+    let port = note.split_once(' ')?.0.parse().ok()?;
+    Some(SocketAddr::from((Ipv4Addr::LOCALHOST, port)))
+}
+
 fn hand_over() -> Option<()> {
     let note = fs::read_to_string(paths::instance_file()).ok()?;
-    let (port, token) = note.split_once(' ')?;
-    let address = SocketAddr::from((Ipv4Addr::LOCALHOST, port.parse().ok()?));
-    let mut stream = TcpStream::connect_timeout(&address, ANSWER_TIMEOUT).ok()?;
+    let token = note.split_once(' ')?.1;
+    let mut stream = TcpStream::connect_timeout(&address()?, ANSWER_TIMEOUT).ok()?;
     stream.set_read_timeout(Some(ANSWER_TIMEOUT)).ok()?;
     stream.write_all(token.as_bytes()).ok()?;
     let mut answer = [0; ACCEPTED.len()];

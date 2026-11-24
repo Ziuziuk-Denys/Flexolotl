@@ -85,6 +85,14 @@ impl Shell {
             }))
             .into_any_element(),
             note(copy.background_note, theme),
+            switch("updates", copy.updates, self.settings.updates, theme)
+                .on_click(cx.listener(|shell, _, window, cx| {
+                    shell.settings.updates ^= true;
+                    shell.settings_changed(window, cx);
+                    shell.check_for_update(cx);
+                }))
+                .into_any_element(),
+            note(copy.updates_note, theme),
             choice(
                 "language",
                 copy.language,

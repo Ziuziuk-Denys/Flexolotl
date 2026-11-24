@@ -1,0 +1,68 @@
+name: update
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_RELEASE_LTO: "off"
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+  FLEXOLOTL_VERSION: 0.0.1
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          rustup update stable
+          rustup default stable
+      - run: cargo build --release --locked -p flexolotl
+      - name: An old program becomes the released one
+        run: |
+          New-Item -ItemType Directory -Force installed | Out-Null
+          Copy-Item target\release\flexolotl.exe installed
+          $before = (Get-FileHash installed\flexolotl.exe).Hash
+          $app = Start-Process installed\flexolotl.exe -PassThru
+          Start-Sleep 60
+          Get-ChildItem installed
+          if ((Get-FileHash installed\flexolotl.exe).Hash -eq $before) { throw "the program was not replaced" }
+          Stop-Process $app
+          $next = Start-Process installed\flexolotl.exe -ArgumentList "--after-update" -PassThru
+          Start-Sleep 10
+          if ($next.HasExited) { throw "the new program does not start" }
+          if (Test-Path installed\flexolotl.exe.old) { throw "the old program was left behind" }
+          Stop-Process $next
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup update stable && rustup default stable
+      - run: cargo build --release --locked -p flexolotl
+      - name: An old program becomes the released one
+        run: |
+          packaging/macos/bundle.sh 0.0.1 target/release/flexolotl arm64 dist
+          mkdir installed && ditto -x -k dist/*.zip installed
+          program=installed/Flexolotl.app/Contents/MacOS/flexolotl
+          before=$(shasum -a 256 "$program")
+          "$program" &
+          sleep 60
+          ls -la installed
+          [ "$(shasum -a 256 "$program")" != "$before" ]
+          kill $!
+          "$program" --after-update &
+          sleep 10
+          kill -0 $!
+          [ ! -e installed/Flexolotl.app.old ]
+          kill $!

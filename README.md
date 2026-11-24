@@ -33,6 +33,7 @@ Flexolotl is a small native app for your Discord status. The window is the profi
 - **Music and videos.** The song, the artist, the cover and the lyrics line by line, taken from the player that runs right now.
 - **Your card, not a mock-up.** Your avatar, its decoration and the colours of the real Discord popout.
 - **Stays out of the way.** Close the window and the status stays on, the axolotl waits in the tray.
+- **Updates itself.** A new version is downloaded in the background and checked against a signature.
 - **Share codes.** One short line of text carries a whole status to a friend.
 - English and Russian.
 
@@ -68,6 +69,7 @@ It goes online only for these:
 | - | - | - |
 | Music, with lyrics and covers on | `lrclib.net`, `itunes.apple.com`, `youtube.com` for browser tabs | the title and the artist |
 | You upload your own picture | `catbox.moe` | the picture, with its metadata removed |
+| Every start, with updates on | `github.com` | an ordinary request for the latest version |
 | Showing pictures | the address of the picture | an ordinary request |
 
 Discord shows pictures only by a public link, so a file from your computer has to be uploaded somewhere. The app says where before anything is sent and shows the progress. Lyrics, covers and browser music can be turned off in the settings.

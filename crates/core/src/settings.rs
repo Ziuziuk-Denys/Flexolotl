@@ -14,6 +14,7 @@ pub struct Settings {
     pub stays_in_background: bool,
     pub music_online: bool,
     pub music_in_browsers: bool,
+    pub updates: bool,
 }
 
 impl Default for Settings {
@@ -29,6 +30,7 @@ impl Default for Settings {
             stays_in_background: true,
             music_online: true,
             music_in_browsers: true,
+            updates: true,
         }
     }
 }

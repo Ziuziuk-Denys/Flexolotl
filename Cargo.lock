@@ -1600,9 +1600,10 @@ dependencies = [
 
 [[package]]
 name = "flexolotl"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "async-channel",
+ "aws-lc-rs",
  "embed-resource",
  "flexolotl-core",
  "futures",
@@ -1620,7 +1621,7 @@ dependencies = [
 
 [[package]]
 name = "flexolotl-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",

@@ -17,6 +17,7 @@ flexolotl-core.workspace = true
 gpui-kit.workspace = true
 reqwest-client.workspace = true
 async-channel.workspace = true
+aws-lc-rs.workspace = true
 serde_json.workspace = true
 image.workspace = true
 futures.workspace = true

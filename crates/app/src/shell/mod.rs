@@ -18,6 +18,7 @@ use crate::{
     saver::Saver,
     statuses::Carousel,
     tray::Tray,
+    update::Update,
     window::Layout,
 };
 use flexolotl_core::{
@@ -40,6 +41,7 @@ pub struct Shell {
     pub is_live: bool,
     pub started_ms: u64,
     pub music: Music,
+    pub update: Update,
     pub local_picture: Option<LocalPicture>,
     pub picture_problem: Option<PictureProblem>,
     editor: Option<CardEditor>,
@@ -75,6 +77,7 @@ impl Shell {
             editor: None,
             gallery: store.load("gallery").unwrap_or_default(),
             music: Music::default(),
+            update: Update::default(),
             local_picture: None,
             picture_problem: None,
             saver: Saver::start(store),
@@ -83,7 +86,7 @@ impl Shell {
                 f32::from(settings.appearance == Appearance::Dark),
                 REVEAL_SECONDS,
             ),
-            waits_for_start: settings.show_on_start,
+            waits_for_start: settings.show_on_start || crate::has_flag(crate::LIVE_FLAG),
             deck,
             settings,
             connection: Connection::default(),
@@ -104,6 +107,7 @@ impl Shell {
         };
         shell.collect_pictures();
         shell.tune_music(cx);
+        shell.start_updates(cx);
         shell
     }
 
@@ -116,6 +120,7 @@ impl Shell {
             cx,
         ));
         self.settle();
+        self.check_for_update(cx);
     }
 
     pub fn editor(&self) -> &CardEditor {
