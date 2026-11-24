@@ -5,10 +5,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
     },
     thread,
-    time::Duration,
 };
-
-const INTERVAL: Duration = Duration::from_secs(1);
 
 pub struct Player {
     stops: Arc<AtomicBool>,
@@ -48,6 +45,6 @@ fn watch(hears_browsers: bool, stops: &AtomicBool, outbox: &async_channel::Sende
                 return;
             }
         }
-        thread::sleep(INTERVAL);
+        system.wait();
     }
 }

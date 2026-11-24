@@ -4,7 +4,7 @@ members = ["crates/core", "crates/app"]
 exclude = ["vendor"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 authors = ["Denys Ziuziuk"]
@@ -19,7 +19,7 @@ serde_json = "1"
 gpui-kit = { version = "=0.11.0", default-features = false }
 reqwest-client = { package = "gpui-pre-reqwest-client", version = "=0.3.14" }
 async-channel = "2"
-image = { version = "0.25", default-features = false }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 futures = { version = "0.3", default-features = false, features = ["executor", "std"] }
 http-client = { package = "gpui-pre-http-client", version = "=0.3.14" }
 ksni = { version = "0.3", default-features = false, features = ["async-io", "blocking"] }

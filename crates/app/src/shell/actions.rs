@@ -200,7 +200,7 @@ impl Shell {
     }
 
     pub fn publish(&self) {
-        if !self.is_live {
+        if !self.is_live || self.uses_music() && self.music.is_settling() {
             return;
         }
         let payload = self

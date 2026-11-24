@@ -1,6 +1,7 @@
 use crate::music::Track;
-use std::process::Command;
+use std::{process::Command, thread, time::Duration};
 
+const INTERVAL: Duration = Duration::from_millis(1000);
 const SEPARATOR: char = '\u{1f}';
 const SCRIPT: &str = r#"
 on report(player, title, artist, seconds, duration, cover)
@@ -29,6 +30,10 @@ return ""
 pub struct Media;
 
 impl Media {
+    pub fn wait(&self) {
+        thread::sleep(INTERVAL);
+    }
+
     pub fn connect() -> Option<Self> {
         Some(Self)
     }

@@ -111,7 +111,7 @@ impl Shell {
         div().relative().size(px(COVER)).map(|frame| {
             if picture.is_loadable() {
                 frame.child(
-                    img(picture.source.trim().to_owned())
+                    img(self.local_copy(&picture.source))
                         .size(px(COVER))
                         .rounded(px(RADIUS))
                         .object_fit(ObjectFit::Cover),

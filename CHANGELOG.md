@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- A song appears on your profile in under half a second, at once with its cover and the line. It took four seconds.
+- Your pictures are kept in a catalogue, one click puts any of them back.
+- The cover of the song comes before your own picture.
+- A photo is made small before it is uploaded, so it goes out almost at once. Photos from a phone are no longer turned.
+
 ## 0.1.0
 
 The first release, a test: tell us what breaks.

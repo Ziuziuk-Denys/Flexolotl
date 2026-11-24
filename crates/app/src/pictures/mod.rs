@@ -1,4 +1,6 @@
+mod catalog;
 mod progress;
+mod shrink;
 mod upload;
 
 use crate::{shell::Shell, tray::Tray};
@@ -12,6 +14,7 @@ use std::{
 };
 use upload::Upload;
 
+const LARGEST_FILE: u64 = 60 * 1024 * 1024;
 const PROGRESS_TICK: Duration = Duration::from_millis(60);
 
 pub struct LocalPicture {
@@ -81,8 +84,12 @@ impl Shell {
         local.progress = Progress::of(local.upload.size());
         let (upload, progress) = (local.upload.clone(), local.progress.clone());
         let sending = cx.spawn(async move |this, cx| {
-            let link = upload.send(client, progress).await;
-            let _ = this.update(cx, |shell, cx| shell.picture_uploaded(link, cx));
+            let link = upload.clone().send(client, progress).await;
+            let kept = link.map(|link| {
+                let file = upload.keep(&link).ok();
+                (link, file)
+            });
+            let _ = this.update(cx, |shell, cx| shell.picture_uploaded(kept, cx));
         });
         let watching = cx.spawn(async move |this, cx| {
             loop {
@@ -127,9 +134,10 @@ impl Shell {
         cx.notify();
     }
 
-    fn picture_uploaded(&mut self, link: Option<String>, cx: &mut Context<Self>) {
-        match link {
-            Some(link) => {
+    fn picture_uploaded(&mut self, kept: Option<(String, Option<String>)>, cx: &mut Context<Self>) {
+        match kept {
+            Some((link, file)) => {
+                self.remember_picture(&link, file);
                 self.deck.current_mut().picture = link;
                 self.local_picture = None;
                 self.tray = None;
@@ -148,11 +156,14 @@ impl Shell {
 
 fn read_picture(path: &Path) -> Result<Upload, PictureProblem> {
     let size = fs::metadata(path).map_or(0, |data| data.len());
-    if size > media::MAX_BYTES as u64 {
+    if size > LARGEST_FILE {
         return Err(PictureProblem::TooLarge);
     }
     let bytes = fs::read(path).map_err(|_| PictureProblem::WrongKind)?;
     let kind = MediaKind::of(&bytes).ok_or(PictureProblem::WrongKind)?;
-    let clean = media::without_metadata(&bytes).ok_or(PictureProblem::WrongKind)?;
-    Ok(Upload::new(clean, kind))
+    let (bytes, kind) = shrink::prepare(&bytes, kind).ok_or(PictureProblem::WrongKind)?;
+    if bytes.len() > media::MAX_BYTES {
+        return Err(PictureProblem::TooLarge);
+    }
+    Ok(Upload::new(bytes, kind))
 }

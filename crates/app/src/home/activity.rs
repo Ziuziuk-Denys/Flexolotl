@@ -101,7 +101,7 @@ impl Shell {
             .map(|frame| {
                 if picture.is_loadable() {
                     frame.child(
-                        img(picture.source.trim().to_owned())
+                        img(self.local_copy(&picture.source))
                             .size(px(PICTURE))
                             .rounded(px(8.))
                             .object_fit(ObjectFit::Cover),
@@ -153,11 +153,8 @@ impl Shell {
     }
 
     fn shown_picture(&self) -> String {
-        let own = self.deck.current().picture.clone();
-        match self.music.cover().filter(|_| own.is_empty()) {
-            Some(cover) => cover.to_owned(),
-            None => own,
-        }
+        let cover = self.music.cover().filter(|_| self.uses_music());
+        cover.unwrap_or(&self.deck.current().picture).to_owned()
     }
 
     fn render_track_lines(&self) -> AnyElement {

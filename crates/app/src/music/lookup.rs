@@ -1,49 +1,51 @@
 use super::{Track, video};
 use flexolotl_core::lyrics::{Lyrics, Song};
-use futures::{AsyncReadExt, future::join};
-use http_client::{AsyncBody, HttpClient};
+use futures::{
+    AsyncReadExt,
+    future::{join, join_all},
+};
+use http_client::{AsyncBody, HttpClient, Method, Request, Response};
 use serde_json::Value;
 use std::{fmt::Write, ops::RangeInclusive, sync::Arc};
 
 const LYRICS: &str = "https://lrclib.net/api/search";
 const COVERS: &str = "https://itunes.apple.com/search";
-const VIDEOS: &str = "https://www.youtube.com/results";
 const MAX_RESPONSE: u64 = 2 * 1024 * 1024;
 const LENGTH_TOLERANCE_SECONDS: f64 = 15.;
 const SPEEDS: RangeInclusive<f64> = 0.6..=1.7;
 
-#[derive(Default)]
-pub struct Found {
-    pub lyrics: Option<Lyrics>,
-    pub cover: Option<String>,
-}
-
-pub async fn find(client: Arc<dyn HttpClient>, track: &Track) -> Found {
+pub async fn find_lyrics(client: Arc<dyn HttpClient>, track: Track) -> Option<Lyrics> {
     let song = Song::from_player(&track.artist, &track.title);
-    let (lyrics, cover) = join(
-        find_lyrics(&client, &song, track.length_ms),
-        find_cover(&client, &song, track),
-    )
-    .await;
-    Found { lyrics, cover }
+    let seconds = track.length_ms as f64 / 1000.;
+    let spellings = song.spellings();
+    let (exact, simpler) = spellings.split_first()?;
+    if let Some(lyrics) = try_spelling(&client, &song, exact, seconds).await {
+        return Some(lyrics);
+    }
+    let tries = simpler
+        .iter()
+        .map(|spelling| try_spelling(&client, &song, spelling, seconds));
+    let words = [("q", format!("{} {}", song.artist, song.title))];
+    let (found, loose) = join(join_all(tries), get(&client, LYRICS, &words)).await;
+    found
+        .into_iter()
+        .flatten()
+        .next()
+        .or_else(|| best_lyrics(&loose?, &song, seconds, song.has_changed_speed()))
 }
 
-async fn find_lyrics(client: &Arc<dyn HttpClient>, song: &Song, length_ms: u64) -> Option<Lyrics> {
-    let seconds = length_ms as f64 / 1000.;
-    for spelling in song.spellings() {
-        let query = [
-            ("artist_name", spelling.artist.clone()),
-            ("track_name", spelling.title.clone()),
-        ];
-        if let Some(answer) = get(client, LYRICS, &query).await
-            && let Some(lyrics) = best_lyrics(&answer, &spelling, seconds, song.has_changed_speed())
-        {
-            return Some(lyrics);
-        }
-    }
-    let words = [("q", format!("{} {}", song.artist, song.title))];
-    let answer = get(client, LYRICS, &words).await?;
-    best_lyrics(&answer, song, seconds, song.has_changed_speed())
+async fn try_spelling(
+    client: &Arc<dyn HttpClient>,
+    song: &Song,
+    spelling: &Song,
+    seconds: f64,
+) -> Option<Lyrics> {
+    let query = [
+        ("artist_name", spelling.artist.clone()),
+        ("track_name", spelling.title.clone()),
+    ];
+    let answer = get(client, LYRICS, &query).await?;
+    best_lyrics(&answer, spelling, seconds, song.has_changed_speed())
 }
 
 fn best_lyrics(
@@ -75,22 +77,29 @@ fn best_lyrics(
     (!lyrics.is_empty()).then_some(lyrics)
 }
 
-async fn find_cover(client: &Arc<dyn HttpClient>, song: &Song, track: &Track) -> Option<String> {
-    if track.cover.is_some() {
-        return None;
+pub async fn find_cover(client: Arc<dyn HttpClient>, track: Track) -> Option<String> {
+    let song = Song::from_player(&track.artist, &track.title);
+    if !track.is_from_browser {
+        return find_album_cover(&client, &song).await;
     }
-    if track.is_from_browser
-        && let Some(cover) = find_video_cover(client, track).await
-    {
-        return Some(cover);
-    }
-    find_album_cover(client, song).await
+    let (video, album) = join(
+        find_video_cover(&client, &track),
+        find_album_cover(&client, &song),
+    )
+    .await;
+    video.or(album)
 }
 
 async fn find_video_cover(client: &Arc<dyn HttpClient>, track: &Track) -> Option<String> {
-    let words = [("search_query", format!("{} {}", track.title, track.artist))];
-    let page = get_text(client, VIDEOS, &words).await?;
-    video::cover(&page, &track.title)
+    let question = video::question(&format!("{} {}", track.title, track.artist));
+    let request = Request::builder()
+        .method(Method::POST)
+        .uri(video::SEARCH)
+        .header("Content-Type", "application/json")
+        .body(AsyncBody::from(question))
+        .ok()?;
+    let answer = read(client.send(request).await.ok()?).await?;
+    video::cover(&serde_json::from_str(&answer).ok()?, &track.title)
 }
 
 async fn find_album_cover(client: &Arc<dyn HttpClient>, song: &Song) -> Option<String> {
@@ -120,20 +129,16 @@ async fn get(
     endpoint: &str,
     query: &[(&str, String)],
 ) -> Option<Value> {
-    serde_json::from_str(&get_text(client, endpoint, query).await?).ok()
-}
-
-async fn get_text(
-    client: &Arc<dyn HttpClient>,
-    endpoint: &str,
-    query: &[(&str, String)],
-) -> Option<String> {
     let mut url = endpoint.to_owned();
     for (index, (name, value)) in query.iter().enumerate() {
         let separator = if index == 0 { '?' } else { '&' };
         let _ = write!(url, "{separator}{name}={}", escape(value));
     }
     let response = client.get(&url, AsyncBody::empty(), true).await.ok()?;
+    serde_json::from_str(&read(response).await?).ok()
+}
+
+async fn read(response: Response<AsyncBody>) -> Option<String> {
     if !response.status().is_success() {
         return None;
     }

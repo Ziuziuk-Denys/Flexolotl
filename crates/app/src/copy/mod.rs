@@ -12,6 +12,7 @@ pub struct Copy {
     pub no_lyrics: &'static str,
     pub music_source: &'static str,
     pub choose_picture: &'static str,
+    pub catalog: &'static str,
     pub choose_another: &'static str,
     pub upload: &'static str,
     pub uploading: &'static str,

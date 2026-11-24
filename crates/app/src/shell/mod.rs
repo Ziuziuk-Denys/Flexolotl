@@ -21,6 +21,7 @@ use crate::{
     window::Layout,
 };
 use flexolotl_core::{
+    gallery::Gallery,
     settings::{Appearance, Settings},
     status::Deck,
     store::Store,
@@ -33,6 +34,7 @@ const CLOCK_TICK: Duration = Duration::from_secs(1);
 
 pub struct Shell {
     pub deck: Deck,
+    pub gallery: Gallery,
     pub settings: Settings,
     pub connection: Connection,
     pub is_live: bool,
@@ -41,7 +43,7 @@ pub struct Shell {
     pub local_picture: Option<LocalPicture>,
     pub picture_problem: Option<PictureProblem>,
     editor: Option<CardEditor>,
-    saver: Saver,
+    pub saver: Saver,
     pub tray: Option<Tray>,
     pub carousel: Carousel,
     pub portrait: Portrait,
@@ -71,6 +73,7 @@ impl Shell {
         Self::start_clock(cx);
         let mut shell = Self {
             editor: None,
+            gallery: store.load("gallery").unwrap_or_default(),
             music: Music::default(),
             local_picture: None,
             picture_problem: None,
@@ -99,6 +102,7 @@ impl Shell {
             focus: cx.focus_handle(),
             _listener: listener,
         };
+        shell.collect_pictures();
         shell.tune_music(cx);
         shell
     }

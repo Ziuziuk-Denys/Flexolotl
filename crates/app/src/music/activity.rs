@@ -16,10 +16,11 @@ impl Shell {
             None => (track.title.clone(), track.artist.clone()),
         };
         let start_ms = now_ms.saturating_sub(track.position_ms());
-        let picture = match status.picture.trim() {
-            "" => self.music.cover().unwrap_or_default().to_owned(),
-            own => own.to_owned(),
-        };
+        let picture = self
+            .music
+            .cover()
+            .unwrap_or(status.picture.trim())
+            .to_owned();
         Some(Activity {
             name: fit(&track.player),
             kind: if self.music.is_video() {

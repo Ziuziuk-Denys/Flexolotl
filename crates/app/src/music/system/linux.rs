@@ -1,8 +1,10 @@
 use super::is_browser;
 use crate::music::Track;
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, sync::mpsc, thread, time::Duration};
 use zbus::{
-    blocking::{Connection, Proxy},
+    MatchRule,
+    blocking::{Connection, MessageIterator, Proxy},
+    message::Type,
     zvariant::OwnedValue,
 };
 
@@ -16,13 +18,41 @@ const ENGINE_NAMES: [&str; 3] = ["chromium", "chrome", "electron"];
 
 type Values = HashMap<String, OwnedValue>;
 
+const LONGEST_WAIT: Duration = Duration::from_secs(1);
+
 pub struct Media {
     bus: Connection,
+    changes: mpsc::Receiver<()>,
+}
+
+impl Drop for Media {
+    fn drop(&mut self) {
+        let _ = self.bus.clone().close();
+    }
 }
 
 impl Media {
     pub fn connect() -> Option<Self> {
-        Connection::session().ok().map(|bus| Self { bus })
+        let bus = Connection::session().ok()?;
+        let (changed, changes) = mpsc::channel();
+        if let Some(signals) = player_signals(&bus) {
+            thread::spawn(move || {
+                for _ in signals {
+                    if changed.send(()).is_err() {
+                        return;
+                    }
+                }
+            });
+        }
+        Some(Self { bus, changes })
+    }
+
+    pub fn wait(&self) {
+        match self.changes.recv_timeout(LONGEST_WAIT) {
+            Ok(()) => while self.changes.try_recv().is_ok() {},
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => thread::sleep(LONGEST_WAIT),
+        }
     }
 
     pub fn playing(&self, hears_browsers: bool) -> Option<Track> {
@@ -95,6 +125,15 @@ impl Media {
     fn bus_proxy(&self) -> Option<Proxy<'_>> {
         Proxy::new(&self.bus, BUS, "/org/freedesktop/DBus", BUS).ok()
     }
+}
+
+fn player_signals(bus: &Connection) -> Option<MessageIterator> {
+    let rule = MatchRule::builder()
+        .msg_type(Type::Signal)
+        .path(PATH)
+        .ok()?
+        .build();
+    MessageIterator::for_match_rule(rule, bus, None).ok()
 }
 
 fn capitalized(program: &str) -> String {

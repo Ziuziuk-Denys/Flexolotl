@@ -2,18 +2,23 @@ use super::{
     Tray, done_button, field_colors, labelled, outlined_button, problem, quiet_link, remove_link,
 };
 use crate::{
+    assets::icon as icons,
     pictures::{LocalPicture, LocalState, PictureProblem},
     shell::Shell,
-    theme::Theme,
-    widgets::{FieldEvent, TextField},
+    theme::{self, Theme},
+    widgets::{FieldEvent, TextField, icon},
 };
 use flexolotl_core::activity::Picture;
 use gpui_kit::{
-    AnyElement, Context, IntoElement, ObjectFit, ParentElement, StatefulInteractiveElement, Styled,
-    StyledImage, Window, div, img, prelude::FluentBuilder, px, relative,
+    AnyElement, Context, InteractiveElement, IntoElement, ObjectFit, ParentElement, SharedString,
+    StatefulInteractiveElement, Styled, StyledImage, Window, div, img, prelude::FluentBuilder, px,
+    relative,
 };
 
 const PREVIEW: f32 = 72.;
+const TILE: f32 = 66.;
+const GAP: f32 = 13.;
+const CATALOG_HEIGHT: f32 = 2.4 * TILE + 2. * GAP;
 
 pub fn render(shell: &Shell, field: &TextField, cx: &mut Context<Shell>) -> AnyElement {
     match &shell.local_picture {
@@ -40,6 +45,7 @@ fn choice(shell: &Shell, field: &TextField, cx: &mut Context<Shell>) -> AnyEleme
             ),
         )
         .children(trouble.map(problem))
+        .children(catalog(shell, cx))
         .child(labelled(copy.picture_label, field))
         .when(is_bad, |tray| tray.child(problem(copy.needs_link)))
         .child(
@@ -54,6 +60,85 @@ fn choice(shell: &Shell, field: &TextField, cx: &mut Context<Shell>) -> AnyEleme
                 },
             )))
         })
+        .into_any_element()
+}
+
+fn catalog(shell: &Shell, cx: &mut Context<Shell>) -> Option<AnyElement> {
+    let pictures = shell.gallery.pictures();
+    if pictures.is_empty() {
+        return None;
+    }
+    let tiles = pictures
+        .iter()
+        .enumerate()
+        .map(|(index, picture)| tile(shell, index, &picture.link, cx));
+    let grid = div()
+        .id("catalog")
+        .mt(px(10.))
+        .max_h(px(CATALOG_HEIGHT))
+        .overflow_y_scroll()
+        .flex()
+        .flex_wrap()
+        .gap(px(GAP))
+        .children(tiles);
+    let section = div()
+        .mt(px(20.))
+        .flex()
+        .flex_col()
+        .child(
+            div()
+                .text_size(px(13.))
+                .text_color(Theme::day().soft)
+                .child(shell.copy().catalog),
+        )
+        .child(grid);
+    Some(section.into_any_element())
+}
+
+fn tile(shell: &Shell, index: usize, link: &str, cx: &mut Context<Shell>) -> AnyElement {
+    let is_current = shell.deck.current().picture.trim() == link;
+    let (chosen, forgotten) = (link.to_owned(), link.to_owned());
+    let group = SharedString::from(format!("tile-{index}"));
+    let remove = div()
+        .id(("forget", index))
+        .absolute()
+        .top(px(4.))
+        .right(px(4.))
+        .size(px(20.))
+        .rounded_full()
+        .flex()
+        .items_center()
+        .justify_center()
+        .bg(Theme::day().ink)
+        .invisible()
+        .group_hover(group.clone(), |style| style.visible())
+        .child(icon(icons::CLOSE, 9.).text_color(theme::sheet()))
+        .on_click(cx.listener(move |shell, _, _, cx| {
+            cx.stop_propagation();
+            shell.forget_picture(&forgotten, cx);
+        }));
+    div()
+        .id(("tile", index))
+        .group(group)
+        .relative()
+        .size(px(TILE))
+        .flex_none()
+        .rounded(px(12.))
+        .bg(Theme::day().hairline)
+        .cursor_pointer()
+        .when(is_current, |tile| {
+            tile.border_2().border_color(Theme::day().ink)
+        })
+        .child(
+            img(shell.local_copy(link))
+                .size_full()
+                .rounded(px(if is_current { 10. } else { 12. }))
+                .object_fit(ObjectFit::Cover),
+        )
+        .child(remove)
+        .on_click(cx.listener(move |shell, _, window, cx| {
+            shell.use_picture(chosen.clone(), window, cx);
+        }))
         .into_any_element()
 }
 
@@ -156,8 +241,7 @@ impl Shell {
         };
         let text = field.text(cx).trim().to_owned();
         if text.is_empty() || is_usable(&text) {
-            self.deck.current_mut().picture = text;
-            self.close_tray(window, cx);
+            self.use_picture(text, window, cx);
         }
     }
 }

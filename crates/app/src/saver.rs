@@ -1,4 +1,4 @@
-use flexolotl_core::{settings::Settings, status::Deck, store::Store};
+use flexolotl_core::{gallery::Gallery, settings::Settings, status::Deck, store::Store};
 use std::{
     sync::mpsc,
     thread::{self, JoinHandle},
@@ -6,6 +6,7 @@ use std::{
 
 enum Job {
     Deck(Deck),
+    Gallery(Gallery),
     Settings(Settings),
 }
 
@@ -19,15 +20,19 @@ impl Saver {
         let (jobs, inbox) = mpsc::channel::<Job>();
         let thread = thread::spawn(move || {
             while let Ok(first) = inbox.recv() {
-                let (mut deck, mut settings) = (None, None);
+                let (mut deck, mut gallery, mut settings) = (None, None, None);
                 for job in std::iter::once(first).chain(inbox.try_iter()) {
                     match job {
                         Job::Deck(value) => deck = Some(value),
+                        Job::Gallery(value) => gallery = Some(value),
                         Job::Settings(value) => settings = Some(value),
                     }
                 }
                 if let Some(deck) = deck {
                     let _ = store.save("deck", &deck);
+                }
+                if let Some(gallery) = gallery {
+                    let _ = store.save("gallery", &gallery);
                 }
                 if let Some(settings) = settings {
                     let _ = store.save("settings", &settings);
@@ -42,6 +47,10 @@ impl Saver {
 
     pub fn save_deck(&self, deck: &Deck) {
         self.send(Job::Deck(deck.clone()));
+    }
+
+    pub fn save_gallery(&self, gallery: &Gallery) {
+        self.send(Job::Gallery(gallery.clone()));
     }
 
     pub fn save_settings(&self, settings: &Settings) {

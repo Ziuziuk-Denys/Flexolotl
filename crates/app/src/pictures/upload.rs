@@ -1,8 +1,11 @@
-use super::progress::{CountedBody, Progress};
+use super::{
+    catalog,
+    progress::{CountedBody, Progress},
+};
 use flexolotl_core::media::MediaKind;
 use futures::AsyncReadExt;
 use http_client::{AsyncBody, HttpClient, Method, Request};
-use std::sync::Arc;
+use std::{io, sync::Arc};
 
 const ENDPOINT: &str = "https://catbox.moe/user/api.php";
 const PUBLIC_PREFIX: &str = "https://files.catbox.moe/";
@@ -12,6 +15,8 @@ const MAX_RESPONSE: u64 = 1024;
 #[derive(Clone)]
 pub struct Upload {
     body: Arc<Vec<u8>>,
+    picture: Arc<Vec<u8>>,
+    kind: MediaKind,
 }
 
 impl Upload {
@@ -24,11 +29,17 @@ impl Upload {
             kind.mime()
         )
         .into_bytes();
-        body.extend(bytes);
+        body.extend(&bytes);
         body.extend(format!("\r\n--{BOUNDARY}--\r\n").into_bytes());
         Self {
             body: Arc::new(body),
+            picture: Arc::new(bytes),
+            kind,
         }
+    }
+
+    pub fn keep(&self, link: &str) -> io::Result<String> {
+        catalog::keep(link, &self.picture, self.kind)
     }
 
     pub fn size(&self) -> usize {

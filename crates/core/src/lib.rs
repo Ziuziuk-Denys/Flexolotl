@@ -1,4 +1,5 @@
 pub mod activity;
+pub mod gallery;
 pub mod lyrics;
 pub mod media;
 pub mod rpc;

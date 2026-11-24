@@ -1,11 +1,13 @@
 use super::is_browser;
 use crate::music::Track;
+use std::{thread, time::Duration};
 use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSession as Session,
     GlobalSystemMediaTransportControlsSessionManager as SessionManager,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus as PlaybackStatus,
 };
 
+const INTERVAL: Duration = Duration::from_millis(250);
 const TICKS_PER_MS: i64 = 10_000;
 
 pub struct Media {
@@ -13,6 +15,10 @@ pub struct Media {
 }
 
 impl Media {
+    pub fn wait(&self) {
+        thread::sleep(INTERVAL);
+    }
+
     pub fn connect() -> Option<Self> {
         let manager = SessionManager::RequestAsync().ok()?.get().ok()?;
         Some(Self { manager })
