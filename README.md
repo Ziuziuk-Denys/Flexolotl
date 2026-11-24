@@ -66,7 +66,7 @@ It goes online only for these:
 
 | When | Where | What is sent |
 | - | - | - |
-| Music, with lyrics and covers on | `lrclib.net`, `itunes.apple.com` | the title and the artist |
+| Music, with lyrics and covers on | `lrclib.net`, `itunes.apple.com`, `youtube.com` for browser tabs | the title and the artist |
 | You upload your own picture | `catbox.moe` | the picture, with its metadata removed |
 | Showing pictures | the address of the picture | an ordinary request |
 

@@ -1,6 +1,6 @@
 mod rows;
 
-use crate::{platform::autostart, presence::LinkState, shell::Shell, theme::Theme};
+use crate::{music, platform::autostart, presence::LinkState, shell::Shell, theme::Theme};
 use flexolotl_core::{
     activity::MemberLine,
     settings::{Appearance, Language, Lines, Motion},
@@ -101,7 +101,7 @@ impl Shell {
 
     fn music_rows(&self, theme: Theme, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let copy = self.copy();
-        vec![
+        let mut rows = vec![
             heading(copy.music, theme),
             switch(
                 "lyrics",
@@ -116,20 +116,25 @@ impl Shell {
             }))
             .into_any_element(),
             note(copy.lyrics_note, theme),
-            switch(
-                "browsers",
-                copy.hears_browsers,
-                self.settings.music_in_browsers,
-                theme,
-            )
-            .on_click(cx.listener(|shell, _, window, cx| {
-                shell.settings.music_in_browsers ^= true;
-                shell.restart_music(cx);
-                shell.settings_changed(window, cx);
-            }))
-            .into_any_element(),
-            note(copy.browsers_note, theme),
-        ]
+        ];
+        if music::HEARS_BROWSERS {
+            rows.extend([
+                switch(
+                    "browsers",
+                    copy.hears_browsers,
+                    self.settings.music_in_browsers,
+                    theme,
+                )
+                .on_click(cx.listener(|shell, _, window, cx| {
+                    shell.settings.music_in_browsers ^= true;
+                    shell.restart_music(cx);
+                    shell.settings_changed(window, cx);
+                }))
+                .into_any_element(),
+                note(copy.browsers_note, theme),
+            ]);
+        }
+        rows
     }
 
     fn look_rows(&self, theme: Theme, cx: &mut Context<Self>) -> Vec<AnyElement> {

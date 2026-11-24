@@ -1,3 +1,5 @@
+#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
+
 use std::time::Instant;
 
 const DRIFT_MS: u64 = 2_500;

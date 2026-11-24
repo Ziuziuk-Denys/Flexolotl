@@ -18,6 +18,7 @@ use crate::{
     saver::Saver,
     statuses::Carousel,
     tray::Tray,
+    window::Layout,
 };
 use flexolotl_core::{
     settings::{Appearance, Settings},
@@ -52,6 +53,7 @@ pub struct Shell {
     page: Spring,
     reveal: Tween,
     clock: FrameClock,
+    pub layout: Layout,
     focus: FocusHandle,
     waits_for_start: bool,
     _listener: Task<()>,
@@ -93,6 +95,7 @@ impl Shell {
             previous_screen: Screen::Home,
             page: Spring::resting_at(1., 0.002),
             clock: FrameClock::default(),
+            layout: Layout::default(),
             focus: cx.focus_handle(),
             _listener: listener,
         };

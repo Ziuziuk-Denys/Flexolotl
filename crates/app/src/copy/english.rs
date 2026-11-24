@@ -19,7 +19,7 @@ pub static COPY: Copy = Copy {
     background_note: "The status stays on, the icon is in the tray",
     music: "Music",
     shows_lyrics: "Lyrics and covers from the internet",
-    lyrics_note: "The title and the artist go to lrclib.net and itunes.apple.com",
+    lyrics_note: "The title and the artist go to lrclib.net, itunes.apple.com and, for a browser tab, youtube.com",
     hears_browsers: "Music and videos from the browser",
     browsers_note: "Friends will see the title of any video or song in a tab",
     settings: "Settings",

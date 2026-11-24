@@ -1,9 +1,10 @@
-use super::{Screen, Shell, navigation::Placement};
+use super::{Screen, Shell, header::HEADER_HEIGHT, navigation::Placement};
 use crate::{
     art::{Engraving, engraving},
     platform::chrome,
     theme::{self, Theme},
     tray,
+    window::Layout,
 };
 use gpui_kit::{
     AnyElement, Context, Focusable, InteractiveElement, IntoElement, KeyDownEvent, ParentElement,
@@ -11,17 +12,18 @@ use gpui_kit::{
 };
 use std::time::Instant;
 
-const HORIZON: f32 = 0.335;
+const HORIZON: f32 = 274.7;
 const TILT: f32 = 0.2;
 
 impl Render for Shell {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.layout = Layout::of(window);
         self.advance(window);
         self.refresh_portrait(window, cx);
         let screens = self.visible_screens();
         let scene_opacity = scene_opacity(&screens);
         let backdrop = Theme::mixed(self.reveal.value.round());
-        let header = self.render_header(Theme::at_height(self.reveal.value, 30.), cx);
+        let header = self.render_header(self.theme_at(HEADER_HEIGHT / 2.), cx);
         let pages: Vec<AnyElement> = screens
             .into_iter()
             .map(|(screen, placement)| self.render_page(screen, placement, window, cx))
@@ -58,6 +60,10 @@ impl Shell {
         self.reveal.value
     }
 
+    pub fn theme_at(&self, y: f32) -> Theme {
+        Theme::at_height(self.reveal.value, y / self.layout.height)
+    }
+
     fn advance(&mut self, window: &Window) {
         let seconds = self.clock.tick(Instant::now());
         self.reveal.advance(seconds);
@@ -82,7 +88,7 @@ impl Shell {
                 lines: self.settings.lines,
                 reveal: self.reveal.value,
                 tilt: TILT,
-                horizon: crate::window::HEIGHT * HORIZON,
+                horizon: self.layout.raised(HORIZON),
             }))
     }
 

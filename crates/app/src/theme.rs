@@ -1,4 +1,3 @@
-use crate::window::HEIGHT;
 use gpui_kit::{Rgba, rgb, rgba};
 
 pub const FONT: &str = "Golos Text";
@@ -14,8 +13,8 @@ pub struct Theme {
 }
 
 impl Theme {
-    pub fn at_height(reveal: f32, y: f32) -> Self {
-        let reach = (REVEAL_SOURCE - y / HEIGHT).abs();
+    pub fn at_height(reveal: f32, share: f32) -> Self {
+        let reach = (REVEAL_SOURCE - share).abs();
         Self::mixed(smoothstep(reach - 0.16, reach + 0.02, reveal * 1.36 - 0.2))
     }
 

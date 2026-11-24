@@ -12,6 +12,7 @@ pub use macos::Media;
 #[cfg(target_os = "windows")]
 pub use windows::Media;
 
+#[cfg(not(target_os = "macos"))]
 const BROWSERS: [&str; 16] = [
     "chromium",
     "chrome",
@@ -31,6 +32,7 @@ const BROWSERS: [&str; 16] = [
     "plasma-browser",
 ];
 
+#[cfg(not(target_os = "macos"))]
 pub fn is_browser(program: &str) -> bool {
     let program = program.to_lowercase();
     BROWSERS
@@ -41,7 +43,7 @@ pub fn is_browser(program: &str) -> bool {
             .is_some_and(|name| BROWSERS.contains(&name))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_os = "macos")))]
 mod tests {
     use super::is_browser;
 

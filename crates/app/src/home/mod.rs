@@ -6,7 +6,7 @@ mod time;
 
 pub use editor::CardEditor;
 
-use crate::{presence::LinkState, shell::Shell, theme::Theme, theme::mix, window::WIDTH};
+use crate::{presence::LinkState, shell::Shell, theme::mix, window::WIDTH};
 use gpui_kit::{
     Animation, AnimationExt, AnyElement, Context, FontWeight, InteractiveElement, IntoElement,
     ParentElement, StatefulInteractiveElement, Styled, Window, div, ease_out_quint, px,
@@ -14,10 +14,10 @@ use gpui_kit::{
 use std::time::Duration;
 
 const CAPTION_TOP: f32 = 256.;
-const CARD_TOP: f32 = 302.;
+pub const CARD_TOP: f32 = 302.;
 pub const CARD_WIDTH: f32 = 300.;
 const CARD_LEFT: f32 = (WIDTH - CARD_WIDTH) / 2.;
-const BUTTON_TOP: f32 = 746.;
+pub const BUTTON_TOP: f32 = 746.;
 
 impl Shell {
     pub fn render_home(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
@@ -30,7 +30,7 @@ impl Shell {
                 div()
                     .absolute()
                     .left(px(CARD_LEFT))
-                    .top(px(CARD_TOP))
+                    .top(px(self.layout.raised(CARD_TOP)))
                     .child(card),
             )
             .child(self.render_show_button(cx))
@@ -38,13 +38,14 @@ impl Shell {
     }
 
     fn render_caption(&self) -> impl IntoElement {
-        let theme = Theme::at_height(self.reveal(), CAPTION_TOP);
+        let top = self.layout.raised(CAPTION_TOP);
+        let theme = self.theme_at(top);
         let (key, text) = self.caption();
         div()
             .absolute()
             .left_0()
             .right_0()
-            .top(px(CAPTION_TOP))
+            .top(px(top))
             .flex()
             .justify_center()
             .text_size(px(18.))
@@ -71,7 +72,8 @@ impl Shell {
     fn render_show_button(&self, cx: &mut Context<Self>) -> AnyElement {
         let copy = self.copy();
         let is_ready = self.is_live || self.can_show();
-        let theme = Theme::at_height(self.reveal(), BUTTON_TOP);
+        let top = self.layout.anchored(BUTTON_TOP);
+        let theme = self.theme_at(top);
         let text = match (self.is_live, self.is_complete()) {
             (true, _) => copy.hide,
             (false, false) => copy.fix_first,
@@ -86,7 +88,7 @@ impl Shell {
             .id("show")
             .absolute()
             .left(px(CARD_LEFT))
-            .top(px(BUTTON_TOP))
+            .top(px(top))
             .w(px(CARD_WIDTH))
             .h(px(48.))
             .rounded_full()

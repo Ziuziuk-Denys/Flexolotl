@@ -3,6 +3,7 @@ mod lookup;
 mod player;
 mod system;
 mod track;
+mod video;
 
 pub use player::Player;
 pub use track::Track;
@@ -13,6 +14,8 @@ use gpui_kit::{Context, Task};
 use std::time::Duration;
 
 const LINE_CHECK: Duration = Duration::from_millis(400);
+
+pub const HEARS_BROWSERS: bool = cfg!(not(target_os = "macos"));
 
 #[derive(Default)]
 pub struct Music {

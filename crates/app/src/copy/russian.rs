@@ -19,7 +19,7 @@ pub static COPY: Copy = Copy {
     background_note: "Статус останется, значок будет в трее",
     music: "Музыка",
     shows_lyrics: "Слова и обложки из интернета",
-    lyrics_note: "Название и автор уходят на lrclib.net и itunes.apple.com",
+    lyrics_note: "Название и автор уходят на lrclib.net, itunes.apple.com, а для вкладки браузера и на youtube.com",
     hears_browsers: "Музыка и видео из браузера",
     browsers_note: "Друзья увидят название любого видео или песни во вкладке",
     settings: "Настройки",

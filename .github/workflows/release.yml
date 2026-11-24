@@ -56,7 +56,7 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get install -y libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev libfontconfig-dev \
-            libvulkan1 mesa-vulkan-drivers xvfb imagemagick x11-apps
+            libvulkan1 mesa-vulkan-drivers xvfb
       - run: rustup update stable && rustup default stable
       - uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
         with:
@@ -73,19 +73,12 @@ jobs:
       - run: packaging/linux/bundle.sh "$VERSION" target/release/flexolotl dist
       - name: Start it once
         run: |
-          mkdir -p screen
           chmod +x dist/*.AppImage
           xvfb-run -a -s "-screen 0 1000x920x24" bash -c '
             env -u WAYLAND_DISPLAY APPIMAGE_EXTRACT_AND_RUN=1 dist/*.AppImage &
             sleep 12
             kill -0 $!
-            import -window root screen/linux.png
             kill $!'
-      - if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: screen-linux-${{ matrix.machine }}
-          path: screen
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-linux-${{ matrix.machine }}

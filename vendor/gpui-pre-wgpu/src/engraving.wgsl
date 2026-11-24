@@ -39,7 +39,7 @@ fn engraving(sprite: PolychromeSprite, position: vec2<f32>) -> vec4<f32> {
     let light_line = 1.0 - smoothstep(light_width - edge, light_width + edge, ridge);
 
     let depth = point.y / max(horizon, 1.0);
-    let scene_mask = (1.0 - smoothstep(0.6, 1.0, depth)) * smoothstep(0.155, 0.42, depth);
+    let scene_mask = (1.0 - smoothstep(0.6, 1.0, depth)) * smoothstep(0.097, 0.2625, point.y / size.x);
     let mask = select(1.0, scene_mask, is_scene);
 
     let source = vec2<f32>(size.x * 0.5, size.y * 0.939);

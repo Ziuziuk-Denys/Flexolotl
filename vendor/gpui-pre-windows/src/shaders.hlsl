@@ -1394,7 +1394,7 @@ float4 engraving(PolychromeSprite sprite, float2 position) {
     float light_line = 1.0 - smoothstep(light_width - edge, light_width + edge, ridge);
 
     float depth = pt.y / max(horizon, 1.0);
-    float scene_mask = (1.0 - smoothstep(0.6, 1.0, depth)) * smoothstep(0.155, 0.42, depth);
+    float scene_mask = (1.0 - smoothstep(0.6, 1.0, depth)) * smoothstep(0.097, 0.2625, pt.y / size.x);
     float mask = is_scene ? scene_mask : 1.0;
 
     float2 source = float2(size.x * 0.5, size.y * 0.939);

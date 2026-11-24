@@ -1,6 +1,6 @@
-use super::Track;
+use super::{Track, video};
 use flexolotl_core::lyrics::{Lyrics, Song};
-use futures::AsyncReadExt;
+use futures::{AsyncReadExt, future::join};
 use http_client::{AsyncBody, HttpClient};
 use serde_json::Value;
 use std::{fmt::Write, sync::Arc};
@@ -8,6 +8,7 @@ use std::{fmt::Write, sync::Arc};
 const LYRICS_GET: &str = "https://lrclib.net/api/get";
 const LYRICS_SEARCH: &str = "https://lrclib.net/api/search";
 const COVERS: &str = "https://itunes.apple.com/search";
+const VIDEOS: &str = "https://www.youtube.com/results";
 const MAX_RESPONSE: u64 = 2 * 1024 * 1024;
 const LENGTH_TOLERANCE_SECONDS: f64 = 6.;
 
@@ -19,11 +20,11 @@ pub struct Found {
 
 pub async fn find(client: Arc<dyn HttpClient>, track: &Track) -> Found {
     let song = Song::from_player(&track.artist, &track.title);
-    let lyrics = find_lyrics(&client, &song, track.length_ms).await;
-    let cover = match &track.cover {
-        Some(_) => None,
-        None => find_cover(&client, &song).await,
-    };
+    let (lyrics, cover) = join(
+        find_lyrics(&client, &song, track.length_ms),
+        find_cover(&client, &song, track),
+    )
+    .await;
     Found { lyrics, cover }
 }
 
@@ -61,7 +62,25 @@ fn synced(entry: &Value) -> Option<Lyrics> {
     (!lyrics.is_empty()).then_some(lyrics)
 }
 
-async fn find_cover(client: &Arc<dyn HttpClient>, song: &Song) -> Option<String> {
+async fn find_cover(client: &Arc<dyn HttpClient>, song: &Song, track: &Track) -> Option<String> {
+    if track.cover.is_some() {
+        return None;
+    }
+    if track.is_from_browser
+        && let Some(cover) = find_video_cover(client, track).await
+    {
+        return Some(cover);
+    }
+    find_album_cover(client, song).await
+}
+
+async fn find_video_cover(client: &Arc<dyn HttpClient>, track: &Track) -> Option<String> {
+    let words = [("search_query", format!("{} {}", track.title, track.artist))];
+    let page = get_text(client, VIDEOS, &words).await?;
+    video::cover(&page, &track.title)
+}
+
+async fn find_album_cover(client: &Arc<dyn HttpClient>, song: &Song) -> Option<String> {
     let query = [
         ("term", format!("{} {}", song.artist, song.title)),
         ("media", "music".to_owned()),
@@ -69,19 +88,18 @@ async fn find_cover(client: &Arc<dyn HttpClient>, song: &Song) -> Option<String>
         ("limit", "5".to_owned()),
     ];
     let answer = get(client, COVERS, &query).await?;
-    let title = song.title.to_lowercase();
     let result = answer["results"].as_array()?.iter().find(|result| {
-        result["trackName"]
-            .as_str()
-            .is_some_and(|name| similar(&name.to_lowercase(), &title))
+        is_same(&result["trackName"], &song.title) && is_same(&result["artistName"], &song.artist)
     })?;
     let small = result["artworkUrl100"].as_str()?;
     let large = small.replace("100x100bb", "512x512bb");
     large.starts_with("https://").then_some(large)
 }
 
-fn similar(left: &str, right: &str) -> bool {
-    left.contains(right) || right.contains(left)
+fn is_same(found: &Value, wanted: &str) -> bool {
+    let found = found.as_str().unwrap_or_default().to_lowercase();
+    let wanted = wanted.to_lowercase();
+    !found.is_empty() && !wanted.is_empty() && (found.contains(&wanted) || wanted.contains(&found))
 }
 
 async fn get(
@@ -89,6 +107,14 @@ async fn get(
     endpoint: &str,
     query: &[(&str, String)],
 ) -> Option<Value> {
+    serde_json::from_str(&get_text(client, endpoint, query).await?).ok()
+}
+
+async fn get_text(
+    client: &Arc<dyn HttpClient>,
+    endpoint: &str,
+    query: &[(&str, String)],
+) -> Option<String> {
     let mut url = endpoint.to_owned();
     for (index, (name, value)) in query.iter().enumerate() {
         let separator = if index == 0 { '?' } else { '&' };
@@ -105,7 +131,7 @@ async fn get(
         .read_to_string(&mut text)
         .await
         .ok()?;
-    serde_json::from_str(&text).ok()
+    Some(text)
 }
 
 fn escape(text: &str) -> String {
@@ -125,7 +151,15 @@ fn escape(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::escape;
+    use super::{escape, is_same};
+    use serde_json::json;
+
+    #[test]
+    fn needs_both_names_to_agree() {
+        assert!(is_same(&json!("Rick Astley"), "rick astley"));
+        assert!(!is_same(&json!("Simon & Garfunkel"), "jawed"));
+        assert!(!is_same(&json!(null), "jawed"));
+    }
 
     #[test]
     fn escapes_everything_that_could_change_the_address() {
