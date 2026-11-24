@@ -1,9 +1,21 @@
 use crate::{
-    platform::tray::{TrayIcon, TrayState},
+    arguments::Arguments,
+    platform::{
+        instance::Note,
+        memory,
+        tray::{TrayIcon, TrayState},
+    },
     shell::Shell,
     window,
 };
-use gpui_kit::{AnyWindowHandle, App, AppContext, Entity, Global, Subscription};
+use gpui_kit::{AnyWindowHandle, App, AppContext, Entity, Global, Subscription, Task};
+use std::time::Duration;
+
+const HANDOVER_DELAY: Duration = Duration::from_secs(3);
+const RELIEF_TICK: Duration = Duration::from_millis(50);
+const RELIEF_TICKS: u32 = 100;
+const BETWEEN_TRIMS: Duration = Duration::from_secs(120);
+const SETTLE_DELAY: Duration = Duration::from_secs(8);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Request {
@@ -16,6 +28,7 @@ struct Background {
     shell: Entity<Shell>,
     window: Option<AnyWindowHandle>,
     tray: TrayIcon,
+    handover: Option<Task<()>>,
     _watch: Subscription,
 }
 
@@ -24,10 +37,11 @@ impl Global for Background {}
 pub fn start(
     sender: async_channel::Sender<Request>,
     requests: async_channel::Receiver<Request>,
-    starts_hidden: bool,
+    arguments: Arguments,
+    predecessor: Option<Note>,
     cx: &mut App,
 ) {
-    let shell = cx.new(Shell::new);
+    let shell = cx.new(|cx| Shell::new(arguments, cx));
     let tray = TrayIcon::start(tray_state(&shell, cx), sender);
     let watch = cx.observe(&shell, |shell, cx| {
         let state = tray_state(&shell, cx);
@@ -38,6 +52,7 @@ pub fn start(
         shell,
         window: None,
         tray,
+        handover: None,
         _watch: watch,
     });
     cx.on_window_closed(|cx, _| window_closed(cx)).detach();
@@ -47,9 +62,55 @@ pub fn start(
         }
     })
     .detach();
-    if !starts_hidden || !has_tray {
+    if let Some(predecessor) = predecessor {
+        relieve(predecessor, cx);
+    }
+    if arguments.starts_hidden && has_tray {
+        settle(cx);
+    } else {
         open(cx);
     }
+}
+
+fn relieve(predecessor: Note, cx: &mut App) {
+    let shell = cx.global::<Background>().shell.clone();
+    cx.spawn(async move |cx| {
+        for _ in 0..RELIEF_TICKS {
+            if cx.update(|cx| shell.read(cx).has_taken_over()) {
+                break;
+            }
+            cx.background_executor().timer(RELIEF_TICK).await;
+        }
+        cx.background_executor()
+            .spawn(async move { predecessor.send(Request::Quit) })
+            .await;
+    })
+    .detach();
+}
+
+fn settle(cx: &mut App) {
+    let settling = cx.spawn(async move |cx| {
+        cx.background_executor().timer(SETTLE_DELAY).await;
+        loop {
+            memory::give_back();
+            cx.background_executor().timer(BETWEEN_TRIMS).await;
+        }
+    });
+    cx.global_mut::<Background>().handover = Some(settling);
+}
+
+fn hand_over_later(cx: &mut App) {
+    let shell = cx.global::<Background>().shell.clone();
+    let waiting = cx.spawn(async move |cx| {
+        cx.background_executor().timer(HANDOVER_DELAY).await;
+        cx.update(|cx| {
+            let started = shell.read(cx).start_heir();
+            if !started {
+                memory::give_back();
+            }
+        });
+    });
+    cx.global_mut::<Background>().handover = Some(waiting);
 }
 
 fn answer(request: Request, cx: &mut App) {
@@ -64,7 +125,8 @@ fn answer(request: Request, cx: &mut App) {
 }
 
 pub fn open(cx: &mut App) {
-    let background = cx.global::<Background>();
+    let background = cx.global_mut::<Background>();
+    background.handover = None;
     let shell = background.shell.clone();
     if let Some(window) = background.window {
         let shown = window.update(cx, |_, window, _| window.activate_window());
@@ -90,7 +152,9 @@ fn window_closed(cx: &mut App) {
         .read(cx)
         .settings
         .stays_in_background;
-    if !(stays && has_tray) {
+    if stays && has_tray {
+        hand_over_later(cx);
+    } else {
         quit(cx);
     }
 }

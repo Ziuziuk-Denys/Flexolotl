@@ -1,4 +1,4 @@
-use crate::BACKGROUND_FLAG;
+use crate::arguments::AUTOSTART;
 use std::{env, io, os::windows::process::CommandExt, process::Command};
 
 const KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
@@ -14,7 +14,7 @@ pub fn set_enabled(enabled: bool) -> io::Result<()> {
         return registry(&["delete", KEY, "/v", NAME, "/f"]);
     }
     let program = env::current_exe()?;
-    let command = format!("\"{}\" {BACKGROUND_FLAG}", program.display());
+    let command = format!("\"{}\" {AUTOSTART}", program.display());
     registry(&["add", KEY, "/v", NAME, "/t", "REG_SZ", "/d", &command, "/f"])
 }
 

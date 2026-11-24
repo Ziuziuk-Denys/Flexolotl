@@ -7,6 +7,7 @@ mod portrait;
 pub use navigation::Screen;
 
 use crate::{
+    arguments::Arguments,
     art::Portrait,
     copy::{self, Copy},
     home::CardEditor,
@@ -60,11 +61,12 @@ pub struct Shell {
     pub layout: Layout,
     focus: FocusHandle,
     waits_for_start: bool,
+    live_since: Option<u64>,
     _listener: Task<()>,
 }
 
 impl Shell {
-    pub fn new(cx: &mut Context<Self>) -> Self {
+    pub fn new(arguments: Arguments, cx: &mut Context<Self>) -> Self {
         let store = Store::new(paths::config_directory());
         let settings: Settings = store.load("settings").unwrap_or_default();
         let copy = copy::for_language(settings.language);
@@ -86,7 +88,9 @@ impl Shell {
                 f32::from(settings.appearance == Appearance::Dark),
                 REVEAL_SECONDS,
             ),
-            waits_for_start: settings.show_on_start || crate::has_flag(crate::LIVE_FLAG),
+            waits_for_start: arguments.live_since.is_some()
+                || settings.show_on_start && !arguments.continues_earlier_run(),
+            live_since: arguments.live_since,
             deck,
             settings,
             connection: Connection::default(),

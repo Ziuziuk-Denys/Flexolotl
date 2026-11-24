@@ -1,4 +1,4 @@
-use crate::{BACKGROUND_FLAG, platform::paths};
+use crate::{arguments::AUTOSTART, platform::paths};
 use std::{env, fs, io, path::PathBuf};
 
 pub fn is_enabled() -> bool {
@@ -13,7 +13,7 @@ pub fn set_enabled(enabled: bool) -> io::Result<()> {
         .map(PathBuf::from)
         .map_or_else(env::current_exe, Ok)?;
     let entry = format!(
-        "[Desktop Entry]\nType=Application\nName=Flexolotl\nExec=\"{}\" {BACKGROUND_FLAG}\n",
+        "[Desktop Entry]\nType=Application\nName=Flexolotl\nExec=\"{}\" {AUTOSTART}\n",
         program.display()
     );
     fs::create_dir_all(directory())?;

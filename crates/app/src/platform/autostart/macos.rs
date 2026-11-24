@@ -1,4 +1,4 @@
-use crate::{BACKGROUND_FLAG, platform::paths};
+use crate::{arguments::AUTOSTART, platform::paths};
 use std::{env, fs, io, path::PathBuf};
 
 const LABEL: &str = "quest.nuvo.Flexolotl";
@@ -22,7 +22,7 @@ pub fn set_enabled(enabled: bool) -> io::Result<()> {
          \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n\
          <plist version=\"1.0\"><dict><key>Label</key><string>{LABEL}</string>\
          <key>ProgramArguments</key><array><string>{program}</string>\
-         <string>{BACKGROUND_FLAG}</string></array>\
+         <string>{AUTOSTART}</string></array>\
          <key>RunAtLoad</key><true/></dict></plist>\n"
     );
     fs::create_dir_all(directory())?;

@@ -1600,7 +1600,7 @@ dependencies = [
 
 [[package]]
 name = "flexolotl"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-channel",
  "aws-lc-rs",
@@ -1621,7 +1621,7 @@ dependencies = [
 
 [[package]]
 name = "flexolotl-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "serde",
  "serde_json",

@@ -25,4 +25,4 @@ mv "$root/icon.png" "$root/$id.png"
 ln -s "$id.png" "$root/.DirIcon"
 ln -s usr/bin/flexolotl "$root/AppRun"
 tar -C "$root" -czf "$out/Flexolotl-$version-linux-$image.tar.gz" usr
-ARCH=$machine appimagetool --appimage-extract-and-run "$root" "$out/Flexolotl-$version-linux-$image.AppImage"
+ARCH=$machine appimagetool --appimage-extract-and-run --comp zstd --mksquashfs-opt -Xcompression-level --mksquashfs-opt 22 --mksquashfs-opt -b --mksquashfs-opt 1M "$root" "$out/Flexolotl-$version-linux-$image.AppImage"

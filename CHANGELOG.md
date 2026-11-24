@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Under 9 MB of memory in the tray with the window closed, it was 44. Closing the window hands the status over to a fresh copy without a blink for your friends.
+- Repairs updates: 0.1.2 could not check the signature, so install this version by hand once.
+
 ## 0.1.2
 
 - Updates itself: looks for a new version at every start, downloads it quietly and shows "Update" in the header. The status stays on through the restart. Every download is checked against a signature.

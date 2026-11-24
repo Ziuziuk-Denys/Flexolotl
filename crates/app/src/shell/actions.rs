@@ -32,6 +32,14 @@ impl Shell {
         is_connected && self.is_complete()
     }
 
+    pub fn has_taken_over(&self) -> bool {
+        match self.connection.link {
+            LinkState::Connecting => false,
+            LinkState::Ready => !self.waits_for_start && !self.is_live,
+            _ => true,
+        }
+    }
+
     pub fn is_complete(&self) -> bool {
         if self.uses_music() {
             return true;
@@ -186,7 +194,7 @@ impl Shell {
 
     fn put_on(&mut self, cx: &mut Context<Self>) {
         self.is_live = true;
-        self.started_ms = now_ms();
+        self.started_ms = self.live_since.take().unwrap_or_else(now_ms);
         self.publish();
         self.retarget_reveal();
         cx.notify();

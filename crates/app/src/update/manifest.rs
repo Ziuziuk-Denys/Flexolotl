@@ -1,7 +1,7 @@
 use super::Version;
 use aws_lc_rs::signature::{ED25519, UnparsedPublicKey};
 
-const RELEASE_KEY: &[u8] = include_bytes!("release-key.bin");
+const RELEASE_KEY: &[u8; 32] = include_bytes!("release-key.bin");
 const PREFIX: &str = "Flexolotl-";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +53,16 @@ mod tests {
         format!(
             "{checksum}  Flexolotl-0.2.0-linux-amd64.deb\n{checksum}  Flexolotl-0.2.0-linux-x86_64.AppImage\n"
         )
+    }
+
+    #[test]
+    fn trusts_a_real_release() {
+        let sums = include_bytes!("fixtures/SHA256SUMS");
+        let signature = include_bytes!("fixtures/SHA256SUMS.sig");
+        for suffix in ["linux-arm64.tar.gz", "mac-arm64.zip", "win-x64.zip"] {
+            let package = find_package(sums, signature, suffix).unwrap();
+            assert_eq!(package.version, Version::parse("0.1.2").unwrap());
+        }
     }
 
     #[test]

@@ -1,5 +1,5 @@
 use super::paths;
-use crate::background::Request;
+use crate::{arguments::Arguments, background::Request};
 use std::{
     collections::hash_map::RandomState,
     fs,
@@ -16,46 +16,63 @@ const LONGEST_WAIT_TICKS: u32 = 100;
 const TOKEN_LENGTH: usize = 32;
 const ACCEPTED: &[u8; 2] = b"ok";
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Instance {
-    First,
-    Second,
+pub enum Claim {
+    Accepted(Option<Note>),
+    HandedOver,
 }
 
-pub fn claim(requests: async_channel::Sender<Request>) -> Instance {
-    if hand_over().is_some() {
-        return Instance::Second;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Note {
+    address: SocketAddr,
+    token: String,
+}
+
+impl Note {
+    pub fn send(&self, request: Request) -> Option<()> {
+        let mut stream = TcpStream::connect_timeout(&self.address, ANSWER_TIMEOUT).ok()?;
+        stream.set_read_timeout(Some(ANSWER_TIMEOUT)).ok()?;
+        stream.write_all(self.token.as_bytes()).ok()?;
+        stream.write_all(&[request as u8]).ok()?;
+        let mut answer = [0; ACCEPTED.len()];
+        stream.read_exact(&mut answer).ok()?;
+        (&answer == ACCEPTED).then_some(())
+    }
+
+    fn read() -> Option<Self> {
+        Self::parse(&fs::read_to_string(paths::instance_file()).ok()?)
+    }
+
+    fn parse(text: &str) -> Option<Self> {
+        let (port, token) = text.split_once(' ')?;
+        Some(Self {
+            address: SocketAddr::from((Ipv4Addr::LOCALHOST, port.parse().ok()?)),
+            token: token.to_owned(),
+        })
+    }
+
+    fn wait_until_gone(&self) {
+        for _ in 0..LONGEST_WAIT_TICKS {
+            if TcpStream::connect(self.address).is_err() {
+                return;
+            }
+            thread::sleep(WAIT_TICK);
+        }
+    }
+}
+
+pub fn claim(arguments: Arguments, requests: async_channel::Sender<Request>) -> Claim {
+    let earlier = Note::read();
+    if let Some(earlier) = &earlier {
+        if arguments.is_after_update {
+            earlier.wait_until_gone();
+        } else if !arguments.is_heir && earlier.send(Request::Open).is_some() {
+            return Claim::HandedOver;
+        }
     }
     if let Some((listener, token)) = announce() {
         thread::spawn(move || listen(&listener, &token, &requests));
     }
-    Instance::First
-}
-
-pub fn wait_for_previous() {
-    for _ in 0..LONGEST_WAIT_TICKS {
-        if address().is_none_or(|address| TcpStream::connect(address).is_err()) {
-            return;
-        }
-        thread::sleep(WAIT_TICK);
-    }
-}
-
-fn address() -> Option<SocketAddr> {
-    let note = fs::read_to_string(paths::instance_file()).ok()?;
-    let port = note.split_once(' ')?.0.parse().ok()?;
-    Some(SocketAddr::from((Ipv4Addr::LOCALHOST, port)))
-}
-
-fn hand_over() -> Option<()> {
-    let note = fs::read_to_string(paths::instance_file()).ok()?;
-    let token = note.split_once(' ')?.1;
-    let mut stream = TcpStream::connect_timeout(&address()?, ANSWER_TIMEOUT).ok()?;
-    stream.set_read_timeout(Some(ANSWER_TIMEOUT)).ok()?;
-    stream.write_all(token.as_bytes()).ok()?;
-    let mut answer = [0; ACCEPTED.len()];
-    stream.read_exact(&mut answer).ok()?;
-    (&answer == ACCEPTED).then_some(())
+    Claim::Accepted(earlier.filter(|_| arguments.is_heir))
 }
 
 fn announce() -> Option<(TcpListener, String)> {
@@ -72,17 +89,27 @@ fn listen(listener: &TcpListener, token: &str, requests: &async_channel::Sender<
         let Ok(mut stream) = stream else {
             continue;
         };
-        let mut received = [0; TOKEN_LENGTH];
-        let is_known = stream.set_read_timeout(Some(ANSWER_TIMEOUT)).is_ok()
-            && stream.read_exact(&mut received).is_ok()
-            && received == token.as_bytes();
-        if is_known {
-            let _ = stream.write_all(ACCEPTED);
-            if requests.send_blocking(Request::Open).is_err() {
-                return;
-            }
+        let Some(request) = read_request(&mut stream, token) else {
+            continue;
+        };
+        let _ = stream.write_all(ACCEPTED);
+        if requests.send_blocking(request).is_err() {
+            return;
         }
     }
+}
+
+fn read_request(stream: &mut TcpStream, token: &str) -> Option<Request> {
+    let mut received = [0; TOKEN_LENGTH + 1];
+    stream.set_read_timeout(Some(ANSWER_TIMEOUT)).ok()?;
+    stream.read_exact(&mut received).ok()?;
+    let (key, request) = received.split_at(TOKEN_LENGTH);
+    if key != token.as_bytes() {
+        return None;
+    }
+    [Request::Open, Request::Quit]
+        .into_iter()
+        .find(|known| *known as u8 == request[0])
 }
 
 fn random_token() -> String {
@@ -93,6 +120,20 @@ fn random_token() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn answers_only_to_the_token() {
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let address = listener.local_addr().unwrap();
+        let token = random_token();
+        let (sender, requests) = async_channel::unbounded();
+        let kept = token.clone();
+        thread::spawn(move || listen(&listener, &kept, &sender));
+        let note = |token: String| Note { address, token };
+        assert_eq!(note(random_token()).send(Request::Quit), None);
+        assert_eq!(note(token).send(Request::Quit), Some(()));
+        assert_eq!(requests.recv_blocking(), Ok(Request::Quit));
+    }
 
     #[test]
     fn makes_a_fresh_token_every_time() {

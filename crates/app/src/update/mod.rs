@@ -6,11 +6,11 @@ mod version;
 use manifest::Package;
 pub use version::Version;
 
-use crate::{AFTER_UPDATE_FLAG, LIVE_FLAG, background, shell::Shell};
+use crate::{arguments::Arguments, background, shell::Shell};
 use gpui_kit::{Context, Task};
 use http_client::HttpClient;
 use std::{
-    fs,
+    env, fs,
     process::Command,
     sync::Arc,
     time::{Duration, Instant},
@@ -23,6 +23,7 @@ const SHORTEST_BREAK: Duration = Duration::from_secs(10 * 60);
 #[derive(Default)]
 pub struct Update {
     pub state: UpdateState,
+    target: Option<Target>,
     checked: Option<Instant>,
     work: Option<Task<()>>,
     clock: Option<Task<()>>,
@@ -38,7 +39,8 @@ pub enum UpdateState {
 
 impl Shell {
     pub fn start_updates(&mut self, cx: &mut Context<Self>) {
-        if let Some(target) = Target::find() {
+        self.update.target = Target::find();
+        if let Some(target) = &self.update.target {
             target.clean_up();
         }
         self.update.clock = Some(cx.spawn(async move |this, cx| {
@@ -60,7 +62,7 @@ impl Shell {
         if !self.settings.updates || is_recent || self.update.state != UpdateState::Idle {
             return;
         }
-        let Some(target) = Target::find() else {
+        let Some(target) = self.update.target.clone() else {
             return;
         };
         self.update.checked = Some(Instant::now());
@@ -69,11 +71,10 @@ impl Shell {
             .background_executor()
             .spawn(async move { bring(client, target).await });
         self.update.work = Some(cx.spawn(async move |this, cx| {
-            let Some(state) = finding.await else {
-                return;
-            };
+            let state = finding.await;
             let _ = this.update(cx, |shell, cx| {
-                shell.update.state = state;
+                shell.update.state = state.unwrap_or_default();
+                shell.update.work = None;
                 cx.notify();
             });
         }));
@@ -87,18 +88,42 @@ impl Shell {
         }
     }
 
+    pub fn start_heir(&self) -> bool {
+        let can_leave = cfg!(not(target_os = "macos")) && self.update.work.is_none();
+        can_leave
+            && self.start_next(Arguments {
+                starts_hidden: true,
+                is_heir: true,
+                ..Arguments::default()
+            })
+    }
+
     fn restart_updated(&mut self, cx: &mut Context<Self>) {
-        let Some(target) = Target::find() else {
-            return;
+        let arguments = Arguments {
+            is_after_update: true,
+            ..Arguments::default()
         };
-        let mut next = Command::new(target.launched);
-        next.arg(AFTER_UPDATE_FLAG);
-        if self.is_live {
-            next.arg(LIVE_FLAG);
-        }
-        if next.spawn().is_ok() {
+        if self.start_next(arguments) {
             background::quit_later(cx);
         }
+    }
+
+    fn start_next(&self, arguments: Arguments) -> bool {
+        let installed = self
+            .update
+            .target
+            .as_ref()
+            .map(|target| target.launched.clone());
+        let Some(program) = installed.or_else(|| env::current_exe().ok()) else {
+            return false;
+        };
+        let mut next = Command::new(program);
+        let arguments = Arguments {
+            live_since: self.is_live.then_some(self.started_ms),
+            ..arguments
+        };
+        arguments.apply(&mut next);
+        next.spawn().is_ok()
     }
 }
 

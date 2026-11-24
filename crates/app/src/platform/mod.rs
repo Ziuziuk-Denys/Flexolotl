@@ -2,6 +2,7 @@ pub mod autostart;
 pub mod chrome;
 pub mod instance;
 pub mod language;
+pub mod memory;
 #[cfg(target_os = "macos")]
 pub mod menu;
 pub mod paths;
