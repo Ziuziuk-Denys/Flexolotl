@@ -43,17 +43,15 @@ fn every_folder_is_a_plugin_listed_in_the_index() {
             })
         })
         .collect();
-    let index = serde_json::to_string_pretty(&entries).unwrap() + "\n";
+    let index = Value::Array(entries);
     let path = folder().join("index.json");
     if env::var_os("UPDATE_INDEX").is_some() {
-        fs::write(&path, &index).unwrap();
+        let text = serde_json::to_string_pretty(&index).unwrap() + "\n";
+        fs::write(&path, text).unwrap();
     }
     let known = fs::read_to_string(path).unwrap_or_default();
-    assert_eq!(
-        known.replace("\r\n", "\n"),
-        index,
-        "run with UPDATE_INDEX=1"
-    );
+    let known: Value = serde_json::from_str(&known).unwrap_or_default();
+    assert_eq!(known, index, "run with UPDATE_INDEX=1");
 }
 
 #[test]
