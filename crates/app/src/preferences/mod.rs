@@ -9,7 +9,8 @@ use gpui_kit::{
     AnyElement, Context, FontWeight, InteractiveElement, IntoElement, ParentElement,
     StatefulInteractiveElement, Styled, div, px,
 };
-use rows::{choice, heading, link, note, switch};
+use rows::{choice, link, switch};
+pub use rows::{heading, note};
 
 const MEMBER_LINES: [MemberLine; 2] = [MemberLine::Name, MemberLine::Details];
 
@@ -85,6 +86,14 @@ impl Shell {
             }))
             .into_any_element(),
             note(copy.background_note, theme),
+            choice(
+                "plugins",
+                copy.plugins,
+                self.enabled_plugins().len().to_string(),
+                theme,
+            )
+            .on_click(cx.listener(|shell, _, _, cx| shell.open_plugins(cx)))
+            .into_any_element(),
             switch("updates", copy.updates, self.settings.updates, theme)
                 .on_click(cx.listener(|shell, _, window, cx| {
                     shell.settings.updates ^= true;

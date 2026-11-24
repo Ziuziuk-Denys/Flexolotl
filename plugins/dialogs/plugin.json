@@ -1,0 +1,17 @@
+{
+  "id": "dialogs",
+  "name": "Game dialogs",
+  "version": "1.0.0",
+  "api": 1,
+  "author": "Denys Ziuziuk",
+  "about": "The line a character says right now, sent by a game or a mod",
+  "permissions": {
+    "port": 4177
+  },
+  "translations": {
+    "ru": {
+      "name": "Диалоги из игры",
+      "about": "Реплика, которую сейчас говорит персонаж. Ее присылает игра или мод"
+    }
+  }
+}

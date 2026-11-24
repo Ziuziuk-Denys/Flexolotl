@@ -1,0 +1,14 @@
+{
+  "id": "pomodoro",
+  "name": "Pomodoro",
+  "version": "1.0.0",
+  "api": 1,
+  "author": "Denys Ziuziuk",
+  "about": "25 minutes of work, 5 minutes of rest, around and around",
+  "translations": {
+    "ru": {
+      "name": "Помодоро",
+      "about": "25 минут работы, 5 минут отдыха, по кругу"
+    }
+  }
+}

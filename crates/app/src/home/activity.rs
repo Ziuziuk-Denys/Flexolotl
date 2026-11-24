@@ -54,7 +54,9 @@ impl Shell {
     fn render_verb(&self) -> Stateful<Div> {
         let kind = self.deck.current().kind;
         let copy = self.copy();
-        let text = if self.uses_music() {
+        let text = if self.uses_plugin() {
+            self.plugin_verb()
+        } else if self.uses_music() {
             let verb = if self.music.is_video() {
                 ActivityKind::Watching
             } else {
@@ -117,6 +119,9 @@ impl Shell {
         if self.uses_music() {
             return self.render_track_lines();
         }
+        if self.uses_plugin() {
+            return self.render_plugin_lines();
+        }
         let progress = self
             .activity()
             .map_or(Progress::None, |activity| activity.progress);
@@ -152,7 +157,60 @@ impl Shell {
             .into_any_element()
     }
 
+    fn plugin_verb(&self) -> String {
+        let copy = self.copy();
+        match self.plugins.shown() {
+            Some(activity) if activity.kind.shows_progress_bar() => {
+                format!(
+                    "{} {}",
+                    copy.kind_verbs[activity.kind as usize], activity.name
+                )
+            }
+            Some(activity) => copy.kinds[activity.kind as usize].to_owned(),
+            None => {
+                let plugin = self.plugins.find(&self.deck.current().plugin);
+                plugin.map_or(copy.plugins.to_owned(), |plugin| {
+                    plugin.manifest.words(copy.code).name
+                })
+            }
+        }
+    }
+
+    fn render_plugin_lines(&self) -> AnyElement {
+        let activity = self.plugins.shown();
+        let quiet = match self.plugins.problem() {
+            Some(problem) => problem.to_owned(),
+            None => self.copy().plugin_silent.to_owned(),
+        };
+        let (title, subtitle) = match activity {
+            Some(activity) if activity.kind.shows_progress_bar() => {
+                (activity.details.clone(), activity.state.clone())
+            }
+            Some(activity) => (activity.name.clone(), activity.details.clone()),
+            None => (quiet, String::new()),
+        };
+        let progress = activity.map_or(Progress::None, |activity| activity.progress);
+        let time = time::describe(progress, self.copy());
+        spoken_lines(title, subtitle)
+            .children(time.map(|time| {
+                div()
+                    .text_size(px(12.))
+                    .line_height(px(16.))
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(palette::positive())
+                    .child(time)
+            }))
+            .into_any_element()
+    }
+
     fn shown_picture(&self) -> String {
+        if self.uses_plugin() {
+            let activity = self.plugin_activity();
+            return activity.map_or_else(
+                || self.deck.current().picture.clone(),
+                |activity| activity.large_picture.source,
+            );
+        }
         let cover = self.music.cover().filter(|_| self.uses_music());
         cover.unwrap_or(&self.deck.current().picture).to_owned()
     }
@@ -163,26 +221,7 @@ impl Shell {
             .as_ref()
             .map_or(self.copy().nothing_plays, |activity| &activity.details);
         let credit = activity.as_ref().map_or("", |activity| &activity.state);
-        div()
-            .flex_1()
-            .min_w_0()
-            .flex()
-            .flex_col()
-            .text_size(px(14.))
-            .line_height(px(19.))
-            .child(
-                div()
-                    .truncate()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .child(title.to_owned())
-                    .with_animation(
-                        SharedString::from(title.to_owned()),
-                        Animation::new(Duration::from_millis(260)).with_easing(ease_out_quint()),
-                        |line, phase| line.opacity(phase),
-                    ),
-            )
-            .child(div().truncate().child(credit.to_owned()))
-            .into_any_element()
+        spoken_lines(title.to_owned(), credit.to_owned()).into_any_element()
     }
 
     fn render_track_bar(&self) -> Option<AnyElement> {
@@ -265,6 +304,29 @@ impl Shell {
         }
         rows
     }
+}
+
+fn spoken_lines(title: String, subtitle: String) -> Div {
+    let key = SharedString::from(title.clone());
+    div()
+        .flex_1()
+        .min_w_0()
+        .flex()
+        .flex_col()
+        .text_size(px(14.))
+        .line_height(px(19.))
+        .child(
+            div()
+                .truncate()
+                .font_weight(FontWeight::SEMIBOLD)
+                .child(title)
+                .with_animation(
+                    key,
+                    Animation::new(Duration::from_millis(260)).with_easing(ease_out_quint()),
+                    |line, phase| line.opacity(phase),
+                ),
+        )
+        .child(div().truncate().child(subtitle))
 }
 
 fn editable(

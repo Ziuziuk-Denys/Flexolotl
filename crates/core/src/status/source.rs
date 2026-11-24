@@ -6,4 +6,5 @@ pub enum Source {
     #[default]
     Text,
     Music,
+    Plugin,
 }

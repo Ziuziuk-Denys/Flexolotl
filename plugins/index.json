@@ -1,0 +1,41 @@
+[
+  {
+    "about": "The line a character says right now, sent by a game or a mod",
+    "author": "Denys Ziuziuk",
+    "id": "dialogs",
+    "name": "Game dialogs",
+    "translations": {
+      "ru": {
+        "about": "Реплика, которую сейчас говорит персонаж. Ее присылает игра или мод",
+        "name": "Диалоги из игры"
+      }
+    },
+    "version": "1.0.0"
+  },
+  {
+    "about": "The world or the server you play on and the last advancement",
+    "author": "Denys Ziuziuk",
+    "id": "minecraft",
+    "name": "Minecraft",
+    "translations": {
+      "ru": {
+        "about": "Мир или сервер, где ты играешь, и последнее достижение",
+        "name": "Minecraft"
+      }
+    },
+    "version": "1.0.0"
+  },
+  {
+    "about": "25 minutes of work, 5 minutes of rest, around and around",
+    "author": "Denys Ziuziuk",
+    "id": "pomodoro",
+    "name": "Pomodoro",
+    "translations": {
+      "ru": {
+        "about": "25 минут работы, 5 минут отдыха, по кругу",
+        "name": "Помодоро"
+      }
+    },
+    "version": "1.0.0"
+  }
+]

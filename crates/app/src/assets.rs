@@ -27,6 +27,7 @@ icons! {
     WATCHING = "watch.svg",
     COMPETING = "compete.svg",
     MUSIC = "music.svg",
+    PLUGIN = "plugin.svg",
     FACE_ASLEEP = "mark-head-32.svg",
     FACE_AWAKE = "mark-awake-head-32.svg",
     GILLS = "mark-gills-32.svg",

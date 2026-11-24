@@ -2,6 +2,7 @@ mod application;
 mod button;
 mod options;
 mod picture;
+mod plugin;
 
 pub use button::ButtonTray;
 
@@ -13,7 +14,8 @@ use crate::{
 use flexolotl_core::activity::ActivityKind;
 use gpui_kit::{
     Animation, AnimationExt, AnyElement, Context, Div, FontWeight, InteractiveElement, IntoElement,
-    MouseButton, ParentElement, SharedString, Stateful, Styled, div, ease_out_quint, px, rgba,
+    MouseButton, ParentElement, SharedString, Stateful, StatefulInteractiveElement, Styled, div,
+    ease_out_quint, px, relative, rgba,
 };
 use std::time::Duration;
 
@@ -25,6 +27,7 @@ pub enum Tray {
     Button(ButtonTray),
     Picture(TextField),
     Application(TextField),
+    Plugin(String),
 }
 
 impl Shell {
@@ -36,12 +39,19 @@ impl Shell {
 
 pub fn render(shell: &Shell, cx: &mut Context<Shell>) -> Option<AnyElement> {
     let copy = shell.copy();
-    let (title, content) = match shell.tray.as_ref()? {
-        Tray::Verb => (copy.verb_title, options::verbs(shell, cx)),
-        Tray::Time => (copy.time_title, options::times(shell, cx)),
-        Tray::Button(tray) => (copy.button_title, tray.render(copy, cx)),
-        Tray::Picture(field) => (copy.picture_title, picture::render(shell, field, cx)),
-        Tray::Application(field) => (copy.application_title, application::render(copy, field, cx)),
+    let (title, content): (SharedString, _) = match shell.tray.as_ref()? {
+        Tray::Verb => (copy.verb_title.into(), options::verbs(shell, cx)),
+        Tray::Time => (copy.time_title.into(), options::times(shell, cx)),
+        Tray::Button(tray) => (copy.button_title.into(), tray.render(copy, cx)),
+        Tray::Picture(field) => (copy.picture_title.into(), picture::render(shell, field, cx)),
+        Tray::Application(field) => (
+            copy.application_title.into(),
+            application::render(copy, field, cx),
+        ),
+        Tray::Plugin(id) => {
+            let name = shell.plugins.find(id)?.manifest.words(copy.code).name;
+            (name.into(), plugin::render(shell, id, cx))
+        }
     };
     let sheet = div()
         .id("tray")
@@ -49,6 +59,8 @@ pub fn render(shell: &Shell, cx: &mut Context<Shell>) -> Option<AnyElement> {
         .left_0()
         .right_0()
         .occlude()
+        .max_h(relative(0.96))
+        .overflow_y_scroll()
         .p(px(28.))
         .rounded(px(RADIUS))
         .bg(theme::sheet())

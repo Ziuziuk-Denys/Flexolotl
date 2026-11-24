@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0
+
+- Plugins: sources of statuses made by anyone. Install them from the list inside the app, see what each one may do before it runs. Three to start with: Minecraft, game dialogs and Pomodoro. How to write one: the `plugins` folder.
+
 ## 0.1.3
 
 - Under 9 MB of memory in the tray with the window closed, it was 44. Closing the window hands the status over to a fresh copy without a blink for your friends.

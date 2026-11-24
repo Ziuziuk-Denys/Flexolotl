@@ -1,0 +1,21 @@
+{
+  "id": "minecraft",
+  "name": "Minecraft",
+  "version": "1.0.0",
+  "api": 1,
+  "author": "Denys Ziuziuk",
+  "about": "The world or the server you play on and the last advancement",
+  "permissions": {
+    "files": [
+      "~/.minecraft/logs/latest.log",
+      "%APPDATA%/.minecraft/logs/latest.log",
+      "~/Library/Application Support/minecraft/logs/latest.log"
+    ]
+  },
+  "translations": {
+    "ru": {
+      "name": "Minecraft",
+      "about": "Мир или сервер, где ты играешь, и последнее достижение"
+    }
+  }
+}

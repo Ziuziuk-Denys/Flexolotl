@@ -17,7 +17,7 @@
 
 Flexolotl is a small native app for your Discord status. The window is the profile card: whatever you see in it is what friends see on your profile. White means only you see it. Press one button, the window turns black, and now everyone does.
 
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/facts-dark.png"><img src=".github/assets/facts-light.png" alt="18 MB program, 50 MB of memory, 0 % CPU when idle, no bot, token or account" width="880"></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/facts-dark.png"><img src=".github/assets/facts-light.png" alt="19 MB program, 9 MB of memory in the tray, 0 % CPU when idle, no bot, token or account" width="880"></picture></p>
 
 <p align="center"><img src=".github/assets/card.png" alt="The profile card with an editable status, a picture and two buttons" width="880"></p>
 
@@ -29,6 +29,7 @@ Flexolotl is a small native app for your Discord status. The window is the profi
 
 - **Any text.** Playing, listening, watching or competing, in your own words, with a timer if you want one.
 - **Pictures and GIFs.** Paste a link or choose a file from your computer.
+- **Plugins.** A game, a server or a timer can make the status. Install one from the list in the app or [write your own](plugins/README.md) in Lua, it runs in a sandbox and asks before it touches anything.
 - **Two buttons** with your links, clickable on your profile.
 - **Music and videos.** The song, the artist, the cover and the lyrics line by line, taken from the player that runs right now.
 - **Your card, not a mock-up.** Your avatar, its decoration and the colours of the real Discord popout.
@@ -69,6 +70,7 @@ It goes online only for these:
 | - | - | - |
 | Music, with lyrics and covers on | `lrclib.net`, `itunes.apple.com`, `youtube.com` for browser tabs | the title and the artist |
 | You upload your own picture | `catbox.moe` | the picture, with its metadata removed |
+| You open the list of plugins | `raw.githubusercontent.com` | an ordinary request for the list |
 | Every start, with updates on | `github.com` | an ordinary request for the latest version |
 | Showing pictures | the address of the picture | an ordinary request |
 
@@ -76,7 +78,7 @@ Discord shows pictures only by a public link, so a file from your computer has t
 
 ## Where it goes
 
-The first releases are tests. The [roadmap](https://github.com/Ziuziuk-Denys/Flexolotl/milestones) has three goals: under 10 MB of memory while idle, under 5 MB on disk, and plugins made by the community.
+The first releases are tests. The [roadmap](https://github.com/Ziuziuk-Denys/Flexolotl/milestones) goes for a smaller program, more plugins and catching every song.
 
 ## Build it
 
@@ -89,10 +91,12 @@ cargo run --release
 Needs a recent stable Rust. On Linux also the headers of Wayland, xkbcommon and fontconfig; add `--features x11` for X11 support.
 
 ```
-crates/core   statuses, Discord connection, lyrics, settings; no interface
-crates/app    the interface and everything that differs between systems
-vendor        GPUI renderers with the engraving shader added
-packaging     installers and packages
+crates/core     statuses, Discord connection, lyrics, settings; no interface
+crates/app      the interface and everything that differs between systems
+crates/plugins  the sandbox and what plugins may use
+plugins         plugins anyone can install
+vendor          GPUI renderers with the engraving shader added
+packaging       installers and packages
 ```
 
 The interface is [GPUI](https://www.gpui.rs), the library behind the Zed editor. The engraving is a shader written three times, for Vulkan, Direct3D and Metal, so the portrait is cut into lines on the GPU every frame.

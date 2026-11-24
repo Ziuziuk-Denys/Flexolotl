@@ -13,6 +13,7 @@ mod motion;
 mod music;
 mod pictures;
 mod platform;
+mod plugins;
 mod preferences;
 mod presence;
 mod saver;

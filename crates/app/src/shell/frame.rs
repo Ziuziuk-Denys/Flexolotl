@@ -103,6 +103,7 @@ impl Shell {
             Screen::Home => self.render_home(window, cx),
             Screen::Statuses => self.render_statuses(cx),
             Screen::Settings => self.render_settings(cx),
+            Screen::Plugins => self.render_plugins(cx),
         };
         div()
             .absolute()

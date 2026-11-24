@@ -1,5 +1,6 @@
 use crate::activity::MemberLine;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -15,6 +16,7 @@ pub struct Settings {
     pub music_online: bool,
     pub music_in_browsers: bool,
     pub updates: bool,
+    pub plugins: BTreeMap<String, String>,
 }
 
 impl Default for Settings {
@@ -31,6 +33,7 @@ impl Default for Settings {
             music_online: true,
             music_in_browsers: true,
             updates: true,
+            plugins: BTreeMap::new(),
         }
     }
 }

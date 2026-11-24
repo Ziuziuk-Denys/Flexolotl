@@ -20,6 +20,9 @@ impl Shell {
         if self.uses_music() {
             return self.music_activity(now_ms());
         }
+        if self.uses_plugin() {
+            return self.plugin_activity();
+        }
         let status = self.deck.current();
         Some(status.activity(self.started_ms, self.settings.member_line))
     }
@@ -41,7 +44,7 @@ impl Shell {
     }
 
     pub fn is_complete(&self) -> bool {
-        if self.uses_music() {
+        if self.uses_music() || self.uses_plugin() {
             return true;
         }
         let has_title = !self.deck.current().title.trim().is_empty();
@@ -69,13 +72,13 @@ impl Shell {
         let status = self.deck.current_mut();
         status.kind = kind;
         status.source = Source::Text;
-        self.tune_music(cx);
+        self.tune_sources(cx);
         self.close_tray(window, cx);
     }
 
     pub fn choose_music(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.deck.current_mut().source = Source::Music;
-        self.tune_music(cx);
+        self.tune_sources(cx);
         self.close_tray(window, cx);
     }
 
@@ -189,7 +192,7 @@ impl Shell {
     }
 
     pub(super) fn shows_running_time(&self) -> bool {
-        self.uses_music() || self.deck.current().timing != Timing::Off
+        self.uses_music() || self.uses_plugin() || self.deck.current().timing != Timing::Off
     }
 
     fn put_on(&mut self, cx: &mut Context<Self>) {
@@ -217,7 +220,7 @@ impl Shell {
             .and_then(|activity| activity.payload().ok());
         match payload {
             Some(payload) => self.presence.show(payload),
-            None if self.uses_music() => self.presence.hide(),
+            None if self.uses_music() || self.uses_plugin() => self.presence.hide(),
             None => {}
         }
     }
@@ -225,7 +228,7 @@ impl Shell {
     fn current_replaced(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.started_ms = now_ms();
         self.editor().load(self.deck.current(), window, cx);
-        self.tune_music(cx);
+        self.tune_sources(cx);
         self.status_changed(cx);
     }
 

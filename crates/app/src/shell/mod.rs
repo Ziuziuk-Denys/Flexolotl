@@ -15,6 +15,7 @@ use crate::{
     music::Music,
     pictures::{LocalPicture, PictureProblem},
     platform::paths,
+    plugins::Plugins,
     presence::{Presence, Status as Connection},
     saver::Saver,
     statuses::Carousel,
@@ -42,6 +43,7 @@ pub struct Shell {
     pub is_live: bool,
     pub started_ms: u64,
     pub music: Music,
+    pub plugins: Plugins,
     pub update: Update,
     pub local_picture: Option<LocalPicture>,
     pub picture_problem: Option<PictureProblem>,
@@ -79,6 +81,7 @@ impl Shell {
             editor: None,
             gallery: store.load("gallery").unwrap_or_default(),
             music: Music::default(),
+            plugins: Plugins::load(),
             update: Update::default(),
             local_picture: None,
             picture_problem: None,
@@ -110,7 +113,7 @@ impl Shell {
             _listener: listener,
         };
         shell.collect_pictures();
-        shell.tune_music(cx);
+        shell.tune_sources(cx);
         shell.start_updates(cx);
         shell
     }

@@ -9,6 +9,7 @@ pub enum Screen {
     Home,
     Statuses,
     Settings,
+    Plugins,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -23,6 +24,7 @@ impl Screen {
             Self::Statuses => -1.,
             Self::Home => 0.,
             Self::Settings => 1.,
+            Self::Plugins => 2.,
         }
     }
 }

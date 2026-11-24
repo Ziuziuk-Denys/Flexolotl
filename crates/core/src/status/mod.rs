@@ -16,6 +16,8 @@ pub struct Status {
     pub subtitle: String,
     pub kind: ActivityKind,
     pub source: Source,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub plugin: String,
     pub picture: String,
     pub timing: Timing,
     pub buttons: Vec<Button>,
