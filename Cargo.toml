@@ -1,0 +1,44 @@
+[workspace]
+resolver = "3"
+members = ["crates/core", "crates/app"]
+exclude = ["vendor"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Denys Ziuziuk"]
+description = "Make any Discord status and see it exactly as your friends do"
+homepage = "https://github.com/Ziuziuk-Denys/Flexolotl"
+repository = "https://github.com/Ziuziuk-Denys/Flexolotl"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+gpui-kit = { version = "=0.11.0", default-features = false }
+reqwest-client = { package = "gpui-pre-reqwest-client", version = "=0.3.14" }
+async-channel = "2"
+image = { version = "0.25", default-features = false }
+futures = { version = "0.3", default-features = false, features = ["executor", "std"] }
+http-client = { package = "gpui-pre-http-client", version = "=0.3.14" }
+ksni = { version = "0.3", default-features = false, features = ["async-io", "blocking"] }
+sys-locale = "0.3"
+tray-icon = { version = "0.21", default-features = false }
+windows = { version = "0.61", features = ["Foundation", "Foundation_Collections", "Media_Control"] }
+zbus = { version = "5", default-features = false, features = ["async-io", "blocking-api"] }
+flexolotl-core = { path = "crates/core" }
+
+[patch.crates-io]
+gpui-pre-apple = { path = "vendor/gpui-pre-apple" }
+gpui-pre-wgpu = { path = "vendor/gpui-pre-wgpu" }
+gpui-pre-windows = { path = "vendor/gpui-pre-windows" }
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true

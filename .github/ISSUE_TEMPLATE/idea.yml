@@ -1,0 +1,12 @@
+name: Idea
+description: Something Flexolotl should do
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes:
+      label: What you want to do
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: How you do it now

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>quest.nuvo.Flexolotl</string>
+  <key>CFBundleName</key><string>Flexolotl</string>
+  <key>CFBundleDisplayName</key><string>Flexolotl</string>
+  <key>CFBundleExecutable</key><string>flexolotl</string>
+  <key>CFBundleIconFile</key><string>Flexolotl</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>VERSION</string>
+  <key>CFBundleVersion</key><string>VERSION</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.social-networking</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSAppleEventsUsageDescription</key><string>Flexolotl reads the current song from Music and Spotify to show it in your status.</string>
+</dict>
+</plist>

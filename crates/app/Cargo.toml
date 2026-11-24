@@ -1,0 +1,59 @@
+[package]
+name = "flexolotl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+x11 = ["gpui-kit/x11"]
+
+[dependencies]
+flexolotl-core.workspace = true
+gpui-kit.workspace = true
+reqwest-client.workspace = true
+async-channel.workspace = true
+serde_json.workspace = true
+image.workspace = true
+futures.workspace = true
+http-client.workspace = true
+sys-locale.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ksni.workspace = true
+zbus.workspace = true
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+tray-icon.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows.workspace = true
+
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3"
+
+[package.metadata.deb]
+name = "flexolotl"
+section = "net"
+depends = "libxkbcommon0, libxkbcommon-x11-0, libfontconfig1, libvulkan1"
+recommends = "mesa-vulkan-drivers"
+extended-description = "Write any text, add a picture, a GIF and two buttons, and see the profile card exactly as it looks in Discord. Show what plays in any player or browser tab with the line of the song that sounds right now. No bot, no token, no account."
+assets = [
+    ["target/release/flexolotl", "usr/bin/", "755"],
+    ["../../packaging/linux/quest.nuvo.Flexolotl.desktop", "usr/share/applications/", "644"],
+    ["../../packaging/linux/quest.nuvo.Flexolotl.metainfo.xml", "usr/share/metainfo/", "644"],
+    ["../../packaging/icon.png", "usr/share/icons/hicolor/512x512/apps/quest.nuvo.Flexolotl.png", "644"],
+]
+
+[package.metadata.generate-rpm]
+name = "flexolotl"
+assets = [
+    { source = "target/release/flexolotl", dest = "/usr/bin/flexolotl", mode = "755" },
+    { source = "packaging/linux/quest.nuvo.Flexolotl.desktop", dest = "/usr/share/applications/quest.nuvo.Flexolotl.desktop", mode = "644" },
+    { source = "packaging/linux/quest.nuvo.Flexolotl.metainfo.xml", dest = "/usr/share/metainfo/quest.nuvo.Flexolotl.metainfo.xml", mode = "644" },
+    { source = "packaging/icon.png", dest = "/usr/share/icons/hicolor/512x512/apps/quest.nuvo.Flexolotl.png", mode = "644" },
+]

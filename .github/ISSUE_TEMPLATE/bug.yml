@@ -1,0 +1,29 @@
+name: Bug
+description: Something does not work
+labels: [bug]
+body:
+  - type: textarea
+    attributes:
+      label: What happens
+      description: What you did, what you expected, what you got.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: System
+      options: [Windows, macOS, Linux Wayland, Linux X11]
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Flexolotl version and file
+      placeholder: 0.1.0, AppImage
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Discord
+      placeholder: Official app, Flatpak, Vesktop
+  - type: textarea
+    attributes:
+      label: Screenshot or log

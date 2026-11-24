@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Flexolotl
+GenericName=Discord status studio
+GenericName[ru]=Студия статусов для Discord
+Comment=Make any Discord status and see it exactly as your friends do
+Comment[ru]=Любой статус в Discord, сразу в том виде, в каком его видят друзья
+Exec=flexolotl
+Icon=quest.nuvo.Flexolotl
+Terminal=false
+Categories=Network;InstantMessaging;
+Keywords=discord;status;rich presence;activity;music;lyrics;
+StartupWMClass=quest.nuvo.Flexolotl

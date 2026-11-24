@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>quest.nuvo.Flexolotl</id>
+  <name>Flexolotl</name>
+  <summary>Make any Discord status and see it exactly as your friends do</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="io.github.ziuziuk-denys">
+    <name>Denys Ziuziuk</name>
+  </developer>
+  <description>
+    <p>Write any text, add a picture, a GIF and two buttons, and see the profile card exactly as it looks in Discord. Show what plays in any player or browser tab with the line of the song that sounds right now. No bot, no token, no account.</p>
+  </description>
+  <launchable type="desktop-id">quest.nuvo.Flexolotl.desktop</launchable>
+  <url type="homepage">https://github.com/Ziuziuk-Denys/Flexolotl</url>
+  <url type="bugtracker">https://github.com/Ziuziuk-Denys/Flexolotl/issues</url>
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-info">mild</content_attribute>
+  </content_rating>
+  <releases>
+    <release version="0.1.0" date="2026-11-24"/>
+  </releases>
+</component>
