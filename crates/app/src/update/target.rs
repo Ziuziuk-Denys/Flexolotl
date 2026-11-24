@@ -14,13 +14,7 @@ pub struct Target {
     pub installed: PathBuf,
     pub launched: PathBuf,
     pub suffix: String,
-    packing: Packing,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Packing {
-    Plain,
-    Archive(&'static str),
+    inside_archive: Option<&'static str>,
 }
 
 impl Target {
@@ -41,11 +35,11 @@ impl Target {
     pub fn install(&self, download: &Path) -> io::Result<()> {
         let staged = self.beside("new");
         remove(&staged)?;
-        match self.packing {
-            Packing::Plain => {
+        match self.inside_archive {
+            None => {
                 fs::copy(download, &staged)?;
             }
-            Packing::Archive(inner) => {
+            Some(inner) => {
                 let unpacked = self.beside("unpacked");
                 remove(&unpacked)?;
                 fs::create_dir_all(&unpacked)?;
@@ -77,13 +71,13 @@ impl Target {
                 installed: image.clone(),
                 launched: image,
                 suffix: format!("linux-{machine}.AppImage"),
-                packing: Packing::Plain,
+                inside_archive: None,
             },
             None => Self {
                 installed: program.clone(),
                 launched: program,
                 suffix: format!("linux-{machine}.tar.gz"),
-                packing: Packing::Archive("usr/bin/flexolotl"),
+                inside_archive: Some("usr/bin/flexolotl"),
             },
         })
     }
@@ -96,7 +90,7 @@ impl Target {
             installed: bundle,
             launched: program,
             suffix: format!("mac-{}.zip", MACHINE[1]),
-            packing: Packing::Archive("Flexolotl.app"),
+            inside_archive: Some("Flexolotl.app"),
         })
     }
 
@@ -106,7 +100,7 @@ impl Target {
             installed: program.clone(),
             launched: program,
             suffix: format!("win-{}.zip", MACHINE[1]),
-            packing: Packing::Archive("flexolotl.exe"),
+            inside_archive: Some("flexolotl.exe"),
         })
     }
 
@@ -193,7 +187,7 @@ mod tests {
             launched: installed.clone(),
             installed,
             suffix: String::new(),
-            packing: Packing::Plain,
+            inside_archive: None,
         }
     }
 
