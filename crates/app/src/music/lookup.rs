@@ -3,14 +3,14 @@ use flexolotl_core::lyrics::{Lyrics, Song};
 use futures::{AsyncReadExt, future::join};
 use http_client::{AsyncBody, HttpClient};
 use serde_json::Value;
-use std::{fmt::Write, sync::Arc};
+use std::{fmt::Write, ops::RangeInclusive, sync::Arc};
 
-const LYRICS_GET: &str = "https://lrclib.net/api/get";
-const LYRICS_SEARCH: &str = "https://lrclib.net/api/search";
+const LYRICS: &str = "https://lrclib.net/api/search";
 const COVERS: &str = "https://itunes.apple.com/search";
 const VIDEOS: &str = "https://www.youtube.com/results";
 const MAX_RESPONSE: u64 = 2 * 1024 * 1024;
-const LENGTH_TOLERANCE_SECONDS: f64 = 6.;
+const LENGTH_TOLERANCE_SECONDS: f64 = 15.;
+const SPEEDS: RangeInclusive<f64> = 0.6..=1.7;
 
 #[derive(Default)]
 pub struct Found {
@@ -29,36 +29,49 @@ pub async fn find(client: Arc<dyn HttpClient>, track: &Track) -> Found {
 }
 
 async fn find_lyrics(client: &Arc<dyn HttpClient>, song: &Song, length_ms: u64) -> Option<Lyrics> {
-    let seconds = length_ms / 1000;
-    let mut query = vec![
-        ("artist_name", song.artist.clone()),
-        ("track_name", song.title.clone()),
-    ];
-    if seconds > 0 {
-        query.push(("duration", seconds.to_string()));
-    }
-    if let Some(answer) = get(client, LYRICS_GET, &query).await
-        && let Some(lyrics) = synced(&answer)
-    {
-        return Some(lyrics);
+    let seconds = length_ms as f64 / 1000.;
+    for spelling in song.spellings() {
+        let query = [
+            ("artist_name", spelling.artist.clone()),
+            ("track_name", spelling.title.clone()),
+        ];
+        if let Some(answer) = get(client, LYRICS, &query).await
+            && let Some(lyrics) = best_lyrics(&answer, &spelling, seconds, song.has_changed_speed())
+        {
+            return Some(lyrics);
+        }
     }
     let words = [("q", format!("{} {}", song.artist, song.title))];
-    let answer = get(client, LYRICS_SEARCH, &words).await?;
-    answer
+    let answer = get(client, LYRICS, &words).await?;
+    best_lyrics(&answer, song, seconds, song.has_changed_speed())
+}
+
+fn best_lyrics(
+    answer: &Value,
+    song: &Song,
+    seconds: f64,
+    has_changed_speed: bool,
+) -> Option<Lyrics> {
+    let distance = |entry: &Value| {
+        let length = entry["duration"].as_f64().unwrap_or_default();
+        (length - seconds).abs()
+    };
+    let entry = answer
         .as_array()?
         .iter()
-        .filter(|entry| seconds == 0 || is_as_long(entry, seconds as f64))
-        .find_map(synced)
-}
-
-fn is_as_long(entry: &Value, seconds: f64) -> bool {
-    entry["duration"]
-        .as_f64()
-        .is_some_and(|length| (length - seconds).abs() <= LENGTH_TOLERANCE_SECONDS)
-}
-
-fn synced(entry: &Value) -> Option<Lyrics> {
-    let lyrics = Lyrics::from_lrc(entry["syncedLyrics"].as_str()?);
+        .filter(|entry| entry["syncedLyrics"].is_string())
+        .filter(|entry| is_same(&entry["trackName"], &song.title))
+        .min_by(|left, right| distance(left).total_cmp(&distance(right)))?;
+    let text = entry["syncedLyrics"].as_str()?;
+    let length = entry["duration"].as_f64()?;
+    let ratio = seconds / length;
+    let lyrics = if seconds <= 0. || distance(entry) <= LENGTH_TOLERANCE_SECONDS {
+        Lyrics::from_lrc(text)
+    } else if has_changed_speed && SPEEDS.contains(&ratio) {
+        Lyrics::stretched(text, ratio)
+    } else {
+        return None;
+    };
     (!lyrics.is_empty()).then_some(lyrics)
 }
 
@@ -151,8 +164,28 @@ fn escape(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{escape, is_same};
+    use super::*;
     use serde_json::json;
+
+    fn answer() -> Value {
+        json!([
+            {"trackName": "Song", "duration": 400, "syncedLyrics": "[00:01.00]far"},
+            {"trackName": "Song", "duration": 200, "syncedLyrics": "[00:10.00]near"},
+            {"trackName": "Song", "duration": 201, "syncedLyrics": null},
+            {"trackName": "Other", "duration": 203, "syncedLyrics": "[00:01.00]wrong"}
+        ])
+    }
+
+    #[test]
+    fn takes_the_closest_length_and_stretches_only_a_slowed_song() {
+        let song = Song::from_player("a", "Song");
+        let found = best_lyrics(&answer(), &song, 205., false).unwrap();
+        assert_eq!(found.line_at(11_000), Some("near"));
+        assert_eq!(best_lyrics(&answer(), &song, 250., false), None);
+        let slowed = best_lyrics(&answer(), &song, 250., true).unwrap();
+        assert_eq!(slowed.line_at(11_000), None);
+        assert_eq!(slowed.line_at(12_500), Some("near"));
+    }
 
     #[test]
     fn needs_both_names_to_agree() {

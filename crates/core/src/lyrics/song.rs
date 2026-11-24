@@ -18,7 +18,19 @@ const NOISE: [&str; 18] = [
     "текст",
     "слова",
 ];
-const TOPIC: &str = " - Topic";
+const SUFFIXES: [&str; 3] = [" - Topic", "VEVO", " Official"];
+const GUESTS: [&str; 6] = [" feat", " ft.", " ft ", " prod", " при уч", " w/ "];
+const JOINERS: [&str; 6] = [",", " & ", " x ", " X ", " и ", ";"];
+const ALTERED: [&str; 8] = [
+    "slowed",
+    "sped",
+    "speed",
+    "reverb",
+    "nightcore",
+    "daycore",
+    "ускорен",
+    "замедлен",
+];
 const DASHES: [&str; 3] = [" - ", " \u{2013} ", " \u{2014} "];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,13 +55,66 @@ impl Song {
             None => Self { artist, title },
         }
     }
+
+    pub fn spellings(&self) -> Vec<Self> {
+        let first = first_artist(&self.artist);
+        let bare = bare_title(&self.title);
+        let mut spellings = vec![self.clone()];
+        for (artist, title) in [
+            (first, self.title.as_str()),
+            (self.artist.as_str(), bare.as_str()),
+            (first, bare.as_str()),
+        ] {
+            let spelling = Self {
+                artist: artist.to_owned(),
+                title: title.to_owned(),
+            };
+            if !spellings.contains(&spelling) {
+                spellings.push(spelling);
+            }
+        }
+        spellings
+    }
+
+    pub fn has_changed_speed(&self) -> bool {
+        let title = self.title.to_lowercase();
+        ALTERED.iter().any(|word| title.contains(word))
+    }
 }
 
 fn tidy_artist(artist: &str) -> String {
     let artist = artist.trim();
-    let artist = artist.strip_suffix(TOPIC).unwrap_or(artist);
-    let artist = artist.strip_suffix("VEVO").unwrap_or(artist);
-    artist.trim().to_owned()
+    let tidy = SUFFIXES
+        .iter()
+        .find_map(|suffix| artist.strip_suffix(suffix))
+        .unwrap_or(artist);
+    tidy.trim().to_owned()
+}
+
+fn first_artist(artist: &str) -> &str {
+    let end = JOINERS
+        .iter()
+        .chain(&GUESTS)
+        .filter_map(|joiner| artist.find(joiner))
+        .min()
+        .unwrap_or(artist.len());
+    match artist[..end].trim() {
+        "" => artist,
+        first => first,
+    }
+}
+
+fn bare_title(title: &str) -> String {
+    let brackets = title.find(['(', '[']).unwrap_or(title.len());
+    let guests = GUESTS
+        .iter()
+        .filter_map(|guest| title.find(guest))
+        .min()
+        .unwrap_or(title.len());
+    match title[..brackets.min(guests)].trim() {
+        "" => title.to_owned(),
+        bare => bare.to_owned(),
+    }
 }
 
 fn without_noise(title: &str) -> String {
@@ -101,6 +166,28 @@ mod tests {
             song("Кино - Topic", "Группа крови"),
             expected("Кино", "Группа крови")
         );
+    }
+
+    #[test]
+    fn offers_simpler_spellings() {
+        let song = Song::from_player("Travis Scott", "Travis Scott - FE!N ft. Playboi Carti");
+        let simple = Song {
+            artist: "Travis Scott".into(),
+            title: "FE!N".into(),
+        };
+        assert!(song.spellings().contains(&simple));
+        let song = Song::from_player("Post Malone, Swae Lee", "Sunflower (Remix)");
+        let simple = Song {
+            artist: "Post Malone".into(),
+            title: "Sunflower".into(),
+        };
+        assert_eq!(song.spellings().last(), Some(&simple));
+    }
+
+    #[test]
+    fn knows_a_changed_speed() {
+        assert!(Song::from_player("a", "b (Slowed + Reverb)").has_changed_speed());
+        assert!(!Song::from_player("a", "b").has_changed_speed());
     }
 
     #[test]

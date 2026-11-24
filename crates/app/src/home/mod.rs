@@ -65,6 +65,7 @@ impl Shell {
             (LinkState::Connecting, _) => (1, copy.connecting),
             (_, true) if self.uses_music() && self.music.track.is_none() => (4, copy.nothing_plays),
             (_, true) => (2, copy.live),
+            (_, false) if self.uses_music() && self.music.has_no_lyrics() => (5, copy.no_lyrics),
             (_, false) => (3, copy.preview),
         }
     }

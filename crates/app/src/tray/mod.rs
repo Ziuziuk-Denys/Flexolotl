@@ -123,7 +123,7 @@ fn problem(text: &'static str) -> Div {
         .child(text)
 }
 
-fn done_button(text: &'static str) -> Stateful<Div> {
+fn done_button(text: impl Into<SharedString>) -> Stateful<Div> {
     let day = Theme::day();
     div()
         .id("done")
@@ -139,7 +139,7 @@ fn done_button(text: &'static str) -> Stateful<Div> {
         .text_size(px(16.))
         .font_weight(FontWeight::SEMIBOLD)
         .hover(|style| style.opacity(0.88))
-        .child(text)
+        .child(text.into())
 }
 
 fn outlined_button(id: &'static str, text: impl Into<SharedString>) -> Stateful<Div> {
@@ -160,13 +160,16 @@ fn outlined_button(id: &'static str, text: impl Into<SharedString>) -> Stateful<
 }
 
 fn remove_link(text: &'static str) -> Stateful<Div> {
+    quiet_link("remove", text).text_color(theme::danger())
+}
+
+fn quiet_link(id: &'static str, text: &'static str) -> Stateful<Div> {
     div()
-        .id("remove")
+        .id(id)
         .mt(px(16.))
         .flex()
         .justify_center()
         .cursor_pointer()
-        .text_color(theme::danger())
         .hover(|style| style.opacity(0.7))
         .child(text)
 }

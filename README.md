@@ -17,7 +17,7 @@
 
 Flexolotl is a small native app for your Discord status. The window is the profile card: whatever you see in it is what friends see on your profile. White means only you see it. Press one button, the window turns black, and now everyone does.
 
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/facts-dark.png"><img src=".github/assets/facts-light.png" alt="27 MB program, 50 MB of memory, 0 % CPU when idle, no bot, token or account" width="880"></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/facts-dark.png"><img src=".github/assets/facts-light.png" alt="18 MB program, 50 MB of memory, 0 % CPU when idle, no bot, token or account" width="880"></picture></p>
 
 <p align="center"><img src=".github/assets/card.png" alt="The profile card with an editable status, a picture and two buttons" width="880"></p>
 
@@ -71,6 +71,10 @@ It goes online only for these:
 | Showing pictures | the address of the picture | an ordinary request |
 
 Discord shows pictures only by a public link, so a file from your computer has to be uploaded somewhere. The app says where before anything is sent and shows the progress. Lyrics, covers and browser music can be turned off in the settings.
+
+## Where it goes
+
+The first releases are tests. The [roadmap](https://github.com/Ziuziuk-Denys/Flexolotl/milestones) has three goals: under 10 MB of memory while idle, under 5 MB on disk, and plugins made by the community.
 
 ## Build it
 

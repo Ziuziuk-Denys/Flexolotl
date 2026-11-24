@@ -26,6 +26,16 @@ impl Lyrics {
         }
     }
 
+    pub fn stretched(text: &str, ratio: f64) -> Self {
+        let mut lines = parse(text);
+        for line in &mut lines {
+            line.start_ms = (line.start_ms as f64 * ratio).round() as u64;
+        }
+        Self {
+            lines: join_short_lines(lines),
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.lines.is_empty()
     }
@@ -71,6 +81,13 @@ mod tests {
         assert_eq!(lyrics.line_at(1_000), Some("one / two"));
         assert_eq!(lyrics.line_at(9_499), Some("one / two"));
         assert_eq!(lyrics.line_at(60_000), Some("three"));
+    }
+
+    #[test]
+    fn follows_a_slowed_song() {
+        let lyrics = Lyrics::stretched("[00:10.00]one\n[00:20.00]two", 1.25);
+        assert_eq!(lyrics.line_at(12_400), None);
+        assert_eq!(lyrics.line_at(25_000), Some("two"));
     }
 
     #[test]

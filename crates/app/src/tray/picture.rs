@@ -1,24 +1,45 @@
-use super::{Tray, done_button, field_colors, labelled, outlined_button, problem, remove_link};
+use super::{
+    Tray, done_button, field_colors, labelled, outlined_button, problem, quiet_link, remove_link,
+};
 use crate::{
-    pictures::{LocalState, PictureProblem},
+    pictures::{LocalPicture, LocalState, PictureProblem},
     shell::Shell,
     theme::Theme,
     widgets::{FieldEvent, TextField},
 };
 use flexolotl_core::activity::Picture;
 use gpui_kit::{
-    AnyElement, Context, IntoElement, ParentElement, StatefulInteractiveElement, Styled, Window,
-    div, prelude::FluentBuilder, px, relative,
+    AnyElement, Context, IntoElement, ObjectFit, ParentElement, StatefulInteractiveElement, Styled,
+    StyledImage, Window, div, img, prelude::FluentBuilder, px, relative,
 };
 
+const PREVIEW: f32 = 72.;
+
 pub fn render(shell: &Shell, field: &TextField, cx: &mut Context<Shell>) -> AnyElement {
+    match &shell.local_picture {
+        Some(local) => chosen(shell, local, cx),
+        None => choice(shell, field, cx),
+    }
+}
+
+fn choice(shell: &Shell, field: &TextField, cx: &mut Context<Shell>) -> AnyElement {
     let copy = shell.copy();
     let text = field.text(cx);
     let is_bad = !text.trim().is_empty() && !is_usable(&text);
+    let trouble = shell.picture_problem.map(|trouble| match trouble {
+        PictureProblem::TooLarge => copy.picture_too_large,
+        PictureProblem::WrongKind => copy.picture_wrong_kind,
+    });
     div()
         .flex()
         .flex_col()
-        .child(local_picture(shell, cx))
+        .child(
+            div().mt(px(16.)).child(
+                outlined_button("choose-picture", copy.choose_picture)
+                    .on_click(cx.listener(|shell, _, _, cx| shell.choose_picture(cx))),
+            ),
+        )
+        .children(trouble.map(problem))
         .child(labelled(copy.picture_label, field))
         .when(is_bad, |tray| tray.child(problem(copy.needs_link)))
         .child(
@@ -36,34 +57,9 @@ pub fn render(shell: &Shell, field: &TextField, cx: &mut Context<Shell>) -> AnyE
         .into_any_element()
 }
 
-fn progress_bar(share: f32) -> impl IntoElement {
-    let day = Theme::day();
-    div()
-        .mt(px(16.))
-        .h(px(4.))
-        .rounded_full()
-        .bg(day.hairline)
-        .child(div().h_full().w(relative(share)).rounded_full().bg(day.ink))
-}
-
-fn local_picture(shell: &Shell, cx: &mut Context<Shell>) -> AnyElement {
+fn chosen(shell: &Shell, local: &LocalPicture, cx: &mut Context<Shell>) -> AnyElement {
     let copy = shell.copy();
-    let Some(local) = &shell.local_picture else {
-        let trouble = shell.picture_problem.map(|trouble| match trouble {
-            PictureProblem::TooLarge => copy.picture_too_large,
-            PictureProblem::WrongKind => copy.picture_wrong_kind,
-        });
-        return div()
-            .mt(px(16.))
-            .flex()
-            .flex_col()
-            .child(
-                outlined_button("choose-picture", copy.choose_picture)
-                    .on_click(cx.listener(|shell, _, _, cx| shell.choose_picture(cx))),
-            )
-            .children(trouble.map(problem))
-            .into_any_element();
-    };
+    let is_busy = local.state == LocalState::Uploading;
     let percent = (local.share_sent() * 100.).round() as u32;
     let action = match local.state {
         LocalState::Chosen => copy.upload.to_owned(),
@@ -72,18 +68,32 @@ fn local_picture(shell: &Shell, cx: &mut Context<Shell>) -> AnyElement {
         LocalState::Failed => copy.upload_again.to_owned(),
     };
     div()
-        .mt(px(16.))
         .flex()
         .flex_col()
         .child(
             div()
-                .truncate()
-                .text_size(px(18.))
-                .child(local.name.clone()),
+                .mt(px(16.))
+                .flex()
+                .items_center()
+                .gap(px(16.))
+                .child(
+                    img(local.path.clone())
+                        .size(px(PREVIEW))
+                        .flex_none()
+                        .rounded(px(12.))
+                        .object_fit(ObjectFit::Cover),
+                )
+                .child(
+                    div()
+                        .min_w_0()
+                        .truncate()
+                        .text_size(px(18.))
+                        .child(local.name.clone()),
+                ),
         )
         .child(
             div()
-                .mt(px(6.))
+                .mt(px(14.))
                 .line_height(px(21.))
                 .text_color(Theme::day().soft)
                 .child(copy.upload_note),
@@ -91,27 +101,31 @@ fn local_picture(shell: &Shell, cx: &mut Context<Shell>) -> AnyElement {
         .when(local.state == LocalState::Failed, |tray| {
             tray.child(problem(copy.upload_failed))
         })
-        .when(local.state == LocalState::Uploading, |tray| {
-            tray.child(progress_bar(local.share_sent()))
-        })
+        .when(is_busy, |tray| tray.child(progress_bar(local.share_sent())))
         .child(
-            div()
-                .mt(px(14.))
-                .child(
-                    outlined_button("upload-picture", action).on_click(cx.listener(
-                        |shell, _, _, cx| {
-                            let is_busy = shell
-                                .local_picture
-                                .as_ref()
-                                .is_some_and(|local| local.state == LocalState::Uploading);
-                            if !is_busy {
-                                shell.upload_picture(cx);
-                            }
-                        },
-                    )),
-                ),
+            done_button(action).on_click(cx.listener(move |shell, _, _, cx| {
+                if !is_busy {
+                    shell.upload_picture(cx);
+                }
+            })),
         )
+        .when(!is_busy, |tray| {
+            tray.child(
+                quiet_link("choose-another", copy.choose_another)
+                    .on_click(cx.listener(|shell, _, _, cx| shell.choose_picture(cx))),
+            )
+        })
         .into_any_element()
+}
+
+fn progress_bar(share: f32) -> impl IntoElement {
+    let day = Theme::day();
+    div()
+        .mt(px(16.))
+        .h(px(4.))
+        .rounded_full()
+        .bg(day.hairline)
+        .child(div().h_full().w(relative(share)).rounded_full().bg(day.ink))
 }
 
 impl Shell {

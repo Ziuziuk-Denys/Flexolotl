@@ -6,13 +6,17 @@ use flexolotl_core::media::{self, MediaKind};
 use gpui_kit::{Context, PathPromptOptions, SharedString, Task};
 use progress::Progress;
 use std::time::Duration;
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use upload::Upload;
 
 const PROGRESS_TICK: Duration = Duration::from_millis(60);
 
 pub struct LocalPicture {
     pub name: SharedString,
+    pub path: PathBuf,
     pub state: LocalState,
     upload: Upload,
     progress: Progress,
@@ -56,12 +60,13 @@ impl Shell {
             let name = path
                 .file_name()
                 .map(|name| name.to_string_lossy().into_owned());
+            let source = path.clone();
             let read = cx
                 .background_executor()
-                .spawn(async move { read_picture(&path) })
+                .spawn(async move { read_picture(&source) })
                 .await;
             let _ = this.update(cx, |shell, cx| {
-                shell.picture_read(name.unwrap_or_default(), read, cx);
+                shell.picture_read(name.unwrap_or_default(), path, read, cx);
             });
         })
         .detach();
@@ -95,6 +100,7 @@ impl Shell {
     fn picture_read(
         &mut self,
         name: String,
+        path: PathBuf,
         read: Result<Upload, PictureProblem>,
         cx: &mut Context<Self>,
     ) {
@@ -106,6 +112,7 @@ impl Shell {
                 self.picture_problem = None;
                 self.local_picture = Some(LocalPicture {
                     name: name.into(),
+                    path,
                     state: LocalState::Chosen,
                     upload,
                     progress: Progress::default(),

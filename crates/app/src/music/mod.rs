@@ -22,6 +22,7 @@ pub struct Music {
     pub track: Option<Track>,
     lyrics: Option<(String, Lyrics)>,
     cover: Option<(String, String)>,
+    searched: Option<String>,
     line: Option<String>,
     player: Option<Player>,
     tasks: Vec<Task<()>>,
@@ -39,6 +40,11 @@ impl Music {
             let (key, cover) = self.cover.as_ref()?;
             (*key == track.key()).then_some(cover.as_str())
         })
+    }
+
+    pub fn has_no_lyrics(&self) -> bool {
+        let key = self.track.as_ref().map(Track::key);
+        self.lyrics.is_none() && !self.is_video() && key.is_some() && key == self.searched
     }
 
     pub fn is_video(&self) -> bool {
@@ -140,7 +146,8 @@ impl Shell {
             let _ = this.update(cx, |shell, cx| {
                 let key = track.key();
                 shell.music.lyrics = found.lyrics.map(|lyrics| (key.clone(), lyrics));
-                shell.music.cover = found.cover.map(|cover| (key, cover));
+                shell.music.cover = found.cover.map(|cover| (key.clone(), cover));
+                shell.music.searched = Some(key);
                 shell.refresh_line(cx);
                 shell.publish();
                 cx.notify();
